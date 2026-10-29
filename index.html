@@ -32,9 +32,9 @@ textarea{resize:vertical;min-height:42px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 button{border:0;border-radius:7px;padding:10px 14px;font:600 14px "Segoe UI",Arial,sans-serif;cursor:pointer}
 .primary{background:var(--green);color:white}.secondary{background:#e8eef5;color:#29445f}.danger{background:#fce8e6;color:var(--red)}button:hover{filter:brightness(.97)}
-.backup-important{position:relative;display:inline-flex;align-items:center;gap:9px;background:#168447;color:#fff;border:1px solid #0e7139;box-shadow:0 0 0 0 rgba(22,132,71,.55);font-weight:750;animation:backupPulse 2s infinite;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
-.backup-important:hover{background:#0f7139;filter:none;transform:translateY(-1px);box-shadow:0 5px 14px rgba(22,132,71,.25)}
-.backup-important:focus-visible{outline:3px solid #91e6b2;outline-offset:3px}
+.sync-important{position:relative;display:inline-flex;align-items:center;gap:9px;background:#168447;color:#fff;border:1px solid #0e7139;box-shadow:0 0 0 0 rgba(22,132,71,.55);font-weight:750;animation:syncPulse 1.25s infinite;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+.sync-important:hover{background:#0f7139;filter:none;transform:translateY(-1px);box-shadow:0 5px 14px rgba(22,132,71,.25)}
+.sync-important:focus-visible{outline:3px solid #91e6b2;outline-offset:3px}
 .backup-dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#d8ffe5;box-shadow:0 0 0 3px rgba(255,255,255,.17)}
 .mail-status{margin:-2px 0 14px;padding:10px 12px;border-radius:7px;border:1px solid #e6c56b;background:#fff7df;color:#745514;font-size:13px}
 .mail-status.ok{border-color:#9bd2ad;background:#eaf8ee;color:#176536}
@@ -42,8 +42,8 @@ button{border:0;border-radius:7px;padding:10px 14px;font:600 14px "Segoe UI",Ari
 .mail-status.pending{border-color:#e6c56b;background:#fff7df;color:#745514}
 #emailSettings{font-weight:650}
 
-@keyframes backupPulse{0%,100%{box-shadow:0 0 0 0 rgba(22,132,71,.36)}50%{box-shadow:0 0 0 6px rgba(22,132,71,0)}}
-@media(prefers-reduced-motion:reduce){.backup-important{animation:none;transition:none}}
+@keyframes syncPulse{0%,100%{box-shadow:0 0 0 0 rgba(22,132,71,.48)}50%{box-shadow:0 0 0 10px rgba(22,132,71,0)}}
+@media(prefers-reduced-motion:reduce){.sync-important{animation:none;transition:none}}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}
 .stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px}.stat span{display:block;color:var(--muted);font-size:13px}.stat strong{font-size:25px;color:var(--blue-dark)}
 .toolbar{display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:14px}
@@ -124,9 +124,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
       <div class="actions no-print" style="margin:0">
         <button class="secondary" id="exportCsv">Exporter Excel (.csv)</button>
         <button class="secondary" id="exportPrint">Exporter PDF / Imprimer</button>
-        <button class="backup-important" id="backup"><span class="backup-dot" aria-hidden="true"></span> Sauvegarder les données</button>
+        <button class="secondary" id="backup">Sauvegarder les données</button>
         <button class="secondary" id="syncSettings">Configurer la synchronisation</button>
-        <button class="secondary" id="syncNow">Synchroniser maintenant</button>
+        <button class="sync-important" id="syncNow"><span class="backup-dot" aria-hidden="true"></span> Synchroniser maintenant</button>
         <button class="secondary" id="driveBackup">Sauvegarde Google Drive</button>
         <button class="secondary" id="emailSettings">Configurer l’e-mail</button>
         <button class="secondary" id="restoreBtn">Importer une sauvegarde</button>
@@ -237,7 +237,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
  setInterval(syncNow,30000);
   function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
  function formatDate(s){if(!s)return '';const [y,m,d]=s.split('-').map(Number);return new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(y,m-1,d))}
- function visibleTasks(){const q=$('search').value.trim().toLocaleLowerCase('fr');return tasks.filter(t=>(!q||t.description.toLocaleLowerCase('fr').includes(q))&&(!$('filterType').value||t.type===$('filterType').value)&&(!$('filterObs').value||t.obs===$('filterObs').value)&&(!$('filterDate').value||t.date===$('filterDate').value)).sort((a,b)=>a.date.localeCompare(b.date)||a.created-b.created)}
+ function visibleTasks(){const q=$('search').value.trim().toLocaleLowerCase('fr');return tasks.filter(t=>(!q||t.description.toLocaleLowerCase('fr').includes(q))&&(!$('filterType').value||t.type===$('filterType').value)&&(!$('filterObs').value||t.obs===$('filterObs').value)&&(!$('filterDate').value||t.date===$('filterDate').value)).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||(Number(a.created)||0)-(Number(b.created)||0))}
  function render(){
   $('total').textContent=tasks.length;
   $('todayTotal').textContent=tasks.filter(t=>t.date===today()).length;
@@ -256,9 +256,10 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
   const item={type:$('type').value,description:$('description').value.trim(),obs:$('obs').value,date:$('date').value};
   if(!item.description||!item.date)return;
   const savedId=editingId;
+  const selectedDate=$('date').value;
   if(editingId!==null){const i=tasks.findIndex(t=>t.id===editingId);if(i>=0)tasks[i]={...tasks[i],...item};}
   else tasks.push({...item,id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),created:Date.now()});
-  cancelEdit();$('search').value='';$('filterType').value='';$('filterObs').value='';$('filterDate').value='';persist();enqueueSync(tasks.find(t=>t.id===savedId)||tasks[tasks.length-1]);
+  cancelEdit();$('date').value=selectedDate||today();$('search').value='';$('filterType').value='';$('filterObs').value='';$('filterDate').value='';persist();enqueueSync(tasks.find(t=>t.id===savedId)||tasks[tasks.length-1]);
  });
  function cancelEdit(){editingId=null;$('formTitle').textContent='Ajouter une tâche';$('saveBtn').textContent='Enregistrer la tâche';$('cancelEdit').hidden=true;$('taskForm').reset();$('date').value=today()}
  $('cancelEdit').addEventListener('click',cancelEdit);
