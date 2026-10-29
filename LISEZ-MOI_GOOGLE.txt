@@ -1,0 +1,7 @@
+VERSION ADAPTEE GOOGLE + GITHUB PAGES
+Commencer par lire GUIDE_GOOGLE_GITHUB.txt.
+Le code Apps Script à coller se trouve dans Code.gs.
+index.html est le point d'entrée pour GitHub Pages.
+SuiviTaches.html reste disponible sous son nom original.
+Ne publiez jamais la valeur API_SECRET dans GitHub.
+Le dossier sync-service/ contient l'ancienne version Node/PostgreSQL et n'est plus utilisé par cette version Google.

@@ -1,0 +1,47 @@
+RIGOURA DESIGN — SYNCHRONISATION GOOGLE SHEETS + GOOGLE DRIVE + GITHUB PAGES
+
+CE QUI CHANGE
+- Google Sheets devient le stockage central des tâches.
+- Google Apps Script sert d'API et crée les sauvegardes JSON dans Google Drive.
+- GitHub Pages héberge gratuitement l'interface web (PC + iPhone).
+- Le serveur Node/PostgreSQL sur Render n'est plus nécessaire pour la synchronisation.
+
+IMPORTANT
+Cette adaptation utilise une clé API transmise dans l'URL des requêtes JSONP. C'est une solution pratique pour un petit usage personnel, mais ce n'est pas une authentification forte : ne l'utilisez pas pour des données sensibles et ne partagez pas la clé. Toute personne ayant à la fois l'URL publique et la clé peut accéder aux tâches. Pour des données sensibles, il faudra une authentification Google plus robuste.
+
+ÉTAPE A — METTRE À JOUR GOOGLE APPS SCRIPT
+1. Ouvrir le projet Apps Script « Rigoura Sync ».
+2. Dans Code.gs, remplacer tout le code par le fichier Code.gs fourni dans ce dossier.
+3. Enregistrer.
+4. Dans le menu des fonctions, choisir initialiser puis cliquer Exécuter. Accepter les autorisations Google demandées.
+5. Vérifier dans Google Sheets que les onglets Taches et Historique existent.
+6. Ouvrir Déployer > Gérer les déploiements.
+7. Modifier le déploiement existant (icône crayon), choisir une nouvelle version, puis Déployer.
+8. Garder l'accès « Tout le monde » et l'exécution en tant que vous-même. Copier l'URL de l'application Web qui finit par /exec.
+9. La propriété de script API_SECRET doit exister. Ne pas la mettre dans GitHub et ne pas la communiquer.
+
+ÉTAPE B — PUBLIER L'APPLICATION AVEC GITHUB PAGES
+1. Extraire le ZIP sur le PC.
+2. Dans le dépôt GitHub rigoura-suivi-taches, publier les fichiers de l'application à la racine : index.html, SuiviTaches.html, manifest.webmanifest, sw.js et le dossier icons.
+3. Ne pas publier la clé API_SECRET dans un fichier. Le code fourni ne la contient pas.
+4. Dans GitHub : Settings > Pages > Build and deployment > Deploy from a branch > main > /(root) > Save.
+5. Attendre que GitHub affiche l'URL Pages en HTTPS. Le fichier index.html ouvre l'application.
+
+ÉTAPE C — CONNECTER L'APPLICATION
+1. Ouvrir l'application depuis l'URL HTTPS GitHub Pages sur le PC.
+2. Cliquer « Configurer la synchronisation ».
+3. Coller l'URL Apps Script finissant par /exec.
+4. Saisir la valeur de la propriété API_SECRET créée dans Apps Script. Ne pas l'envoyer dans un chat.
+5. À la première configuration sur le PC qui contient les tâches à conserver, choisir OK pour importer les tâches locales existantes.
+6. Attendre le message « Synchronisation Google réussie ».
+7. Ouvrir la même URL GitHub Pages sur l'iPhone et cliquer « Configurer la synchronisation » avec la même URL Apps Script et la même clé. Choisir NON à la question d'importation sur l'iPhone si ses tâches locales ne doivent pas écraser/importer des données séparées.
+8. Pour iPhone : Safari > Partager > Sur l'écran d'accueil.
+
+SAUVEGARDE GOOGLE DRIVE
+Le bouton « Sauvegarde Google Drive » crée un fichier JSON dans le dossier « Rigoura - Sauvegardes des tâches » du compte Google propriétaire du script. La première utilisation peut demander des autorisations Drive. Cette sauvegarde est une copie, pas la base active.
+
+NOTES
+- Les tâches restent enregistrées localement hors ligne; les modifications sont envoyées quand Internet revient et que l'application est ouverte.
+- Le service est une adaptation à tester en pratique. Faire un essai avec une tâche non importante avant d'y mettre toutes les données.
+- Ne supprimez pas l'ancien dossier ou l'ancien ZIP avant d'avoir vérifié la synchronisation sur PC et iPhone.
+- Le service d'envoi d'e-mails préexistant n'est pas reconfiguré par cette adaptation; l'option e-mail peut rester indisponible. La sauvegarde Drive passe désormais par Apps Script.

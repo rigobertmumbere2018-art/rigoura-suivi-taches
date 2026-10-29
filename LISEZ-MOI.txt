@@ -1,0 +1,21 @@
+RIGOURA DESIGN — SUIVI DES TÂCHES
+Installation Windows 10/11
+
+1. Décompressez entièrement le dossier / ZIP dans un emplacement de votre choix.
+2. Double-cliquez sur Installer.bat.
+3. Si Windows demande une confirmation, autorisez l'exécution du script local.
+4. Une icône « Rigoura - Suivi des tâches » sera créée sur le Bureau et dans le menu Démarrer.
+5. Double-cliquez sur l'icône pour ouvrir l'application dans une fenêtre dédiée.
+
+Utilisation hors connexion
+- L'application s'ouvre depuis un fichier local et fonctionne sans Internet.
+- Les données restent dans le stockage local du profil du navigateur utilisé pour cette application.
+- Utilisez régulièrement « Sauvegarder les données » et gardez le fichier JSON en lieu sûr.
+- Ne supprimez pas les données de navigation du navigateur. La sauvegarde JSON permet de restaurer les tâches.
+
+Désinstallation
+- Supprimez les raccourcis du Bureau et du menu Démarrer.
+- Supprimez le dossier : %LOCALAPPDATA%\RigouraSuiviTaches
+- Attention : supprimer ce dossier retire le programme, mais la sauvegarde JSON est à conserver séparément.
+
+Le programme nécessite Microsoft Edge ou Google Chrome installé sur Windows.

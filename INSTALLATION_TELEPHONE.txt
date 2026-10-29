@@ -1,0 +1,18 @@
+RIGOURA SUIVI DES TÂCHES — VERSION TÉLÉPHONE (PWA)
+
+Cette version peut être installée sur Android et iPhone comme une application web, avec icône sur l'écran d'accueil. Pour l'installation PWA, elle doit être hébergée en HTTPS (par exemple sur Render Static Site). Ouvrir le fichier HTML directement depuis un fichier téléchargé ne suffit pas pour installer la PWA.
+
+IMPORTANT SUR LES DONNÉES
+Actuellement, les tâches sont conservées localement dans le navigateur/appareil. Installer l'application sur le téléphone ne synchronise PAS automatiquement les tâches du PC avec celles du téléphone. Pour avoir exactement le même historique sur les deux appareils, il faut ajouter une base de données en ligne avec authentification et synchronisation. Le logiciel peut rester utilisable hors connexion et synchroniser les changements en attente lorsque Internet revient, mais cela nécessite cette étape serveur supplémentaire.
+
+ANDROID
+1. Déployer tous les fichiers du dossier sur un hébergement HTTPS.
+2. Ouvrir l'URL dans Chrome.
+3. Choisir « Installer l'application » ou « Ajouter à l'écran d'accueil ».
+
+IPHONE
+1. Déployer tous les fichiers sur un hébergement HTTPS.
+2. Ouvrir l'URL dans Safari.
+3. Appuyer sur Partager, puis « Sur l'écran d'accueil ».
+
+Le fichier sw.js met en cache l'interface pour permettre l'ouverture hors connexion après une première visite réussie. L'envoi d'e-mail exige Internet.
