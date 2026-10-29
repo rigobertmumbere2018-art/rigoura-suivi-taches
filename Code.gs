@@ -48,7 +48,7 @@ function traiter_(p) {
     if (!op || typeof op.id !== 'string' || !op.id || op.id.length > 128) throw new Error('Identifiant invalide');
     if (!op.deleted) {
       const t = op.task;
-      if (!t || String(t.id) !== op.id || !['conception','correction','impression'].includes(t.type) || !['EN COURS','TERMINÉ'].includes(t.obs) || typeof t.description !== 'string' || t.description.length > 500 || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) throw new Error('Format de tâche invalide');
+      if (!t || String(t.id) !== op.id || !['conception','correction','impression','autres'].includes(t.type) || !['EN COURS','TERMINÉ'].includes(t.obs) || typeof t.description !== 'string' || t.description.length > 500 || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) throw new Error('Format de tâche invalide');
     }
     const lock = LockService.getScriptLock();
     lock.waitLock(10000);
