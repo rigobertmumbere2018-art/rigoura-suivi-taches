@@ -1,0 +1,17 @@
+{
+  "name": "rigoura-suivi-taches-mailer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Service s\u00e9curis\u00e9 d'envoi des sauvegardes Excel de Rigoura Suivi des t\u00e2ches",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "nodemailer": "^6.10.0"
+  }
+}

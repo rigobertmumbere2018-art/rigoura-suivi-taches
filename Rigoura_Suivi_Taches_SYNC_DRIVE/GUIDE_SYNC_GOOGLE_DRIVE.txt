@@ -1,0 +1,36 @@
+RIGOURA DESIGN — SYNCHRONISATION PC + TELEPHONE + GOOGLE DRIVE
+
+STATUT : CODE PREPARE, NON DEPLOYE. AUCUN ACCES A GOOGLE DRIVE N'A ENCORE ETE AUTORISE.
+
+1. BASE DE DONNEES : creer PostgreSQL sur Render (ou autre fournisseur fiable), copier DATABASE_URL.
+2. SERVEUR : publier le dossier sync-service comme service Node.js. Commande : npm install ; demarrage : npm start.
+   Variables : DATABASE_URL, APP_TOKEN (long secret aleatoire), APP_ORIGIN (URL HTTPS EXACTE de l'application).
+3. APPLICATION : publier SuiviTaches.html + manifest.webmanifest + sw.js + icons/ sur un hebergement HTTPS (ex. Render Static Site).
+   Ne PAS mettre de secrets dans GitHub ni dans les fichiers HTML.
+4. GOOGLE DRIVE : dans le compte Rigobertmumbere2018@gmail.com, creer un dossier « Rigoura — Sauvegardes tâches ».
+   Copier son ID depuis l'URL Drive et le placer dans GOOGLE_DRIVE_FOLDER_ID.
+5. GOOGLE CLOUD : creer un projet et activer Google Drive API, configurer l'ecran de consentement OAuth,
+   creer un client OAuth 2.0 (application web) avec URI de redirection appropriee.
+   Autoriser explicitement le compte Google ci-dessus et obtenir un refresh token avec le scope
+   https://www.googleapis.com/auth/drive.file via un flux OAuth consenti.
+   Ajouter GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN aux variables secretes du serveur.
+   ATTENTION : drive.file peut ne pas donner acces a un dossier cree manuellement ; choisir le dossier
+   via Google Picker autorise ou employer le scope drive avec verification Google potentiellement requise.
+   Pour un fonctionnement simple, utiliser le scope drive en mode test avec utilisateur de test et
+   consentement explicite ; les refresh tokens en mode test peuvent expirer rapidement (souvent 7 jours).
+6. OUVRIR l'application sur PC, cliquer « Configurer la synchronisation », saisir URL HTTPS du serveur et APP_TOKEN.
+   Importer les anciennes taches UNIQUEMENT lors de la premiere configuration, depuis l'appareil source.
+   Ouvrir sur telephone, configurer le meme serveur et la meme cle, mais ne pas reimporter d'anciennes taches.
+7. CLIQUER « Sauvegarde Google Drive » : le serveur cree un .xlsx et un .json dans le dossier autorise.
+8. AUTOMATISER : configurer un cron externe (par ex. Render Cron) pour POST /api/backup-scheduled
+   avec Authorization: Bearer APP_TOKEN une fois par jour. Le cron N'EST PAS ACTIF sans configuration.
+
+SECURITE / LIMITES
+- Ne jamais partager APP_TOKEN, refresh token, ou secrets Google.
+- L'application conserve APP_TOKEN dans le stockage local du navigateur. Ne l'utiliser que sur appareils de confiance.
+- Si 2 appareils modifient simultanement la meme tache, la derniere operation RECUE par le serveur gagne.
+- Les suppressions sont propagees par tombstones; les changements hors ligne restent en attente dans le navigateur.
+- Ne pas effacer les donnees du navigateur tant que la file de synchronisation n'est pas vide.
+- Les sauvegardes Drive sont des COPIES, pas la base active. La restauration Drive reste manuelle via JSON.
+- Les sauvegardes automatiques exigent un ordonnanceur configure. Aucun envoi Drive n'est actif actuellement.
+- Cette version n'a pas encore ete testee sur un service deploye et n'inclut pas de connexion Google integree dans l'interface.
