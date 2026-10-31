@@ -242,7 +242,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 
  const FB_CONFIG_KEY='rigoura_firebase_config_v1';
  const FB_ADMIN_EMAIL='rigobertmumbere2018@gmail.com';
- let fbConfig={};let fbApp=null,fbAuth=null,fbDb=null,fbUnsubscribe=null,authUser=null;
+ let fbConfig={};let fbApp=null,fbAuth=null,fbDb=null,fbUnsubscribe=null,authUser=null,accountActive=false;
  try{fbConfig=JSON.parse(localStorage.getItem(FB_CONFIG_KEY)||'{}')}catch(e){}
  function authMessage(message,kind='pending'){const el=$('authNotice');if(el){el.className='mail-status '+kind;el.textContent=message}}
  function firebaseReady(){return !!(fbAuth&&fbDb)}
@@ -262,8 +262,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
   const profile=await userRef.get();
   if(!profile.exists)await userRef.set({email:user.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),active:admin,displayName:user.displayName||''});
   const current=(await userRef.get()).data()||{};
-  if(!admin&&current.active!==true){showPage('login');authMessage('Votre compte est créé, mais il attend l’approbation de l’administrateur.','pending');$('signedInText').textContent='Compte en attente : '+user.email;fbUnsubscribe=userRef.onSnapshot(doc=>{if(doc.exists&&doc.data().active===true)location.reload()});return}
-  authMessage('Connexion réussie. Vos tâches sont associées à votre compte.','ok');if(location.hash==='#login')showPage('dashboard');
+  if(!admin&&current.active!==true){tasks=[];localStorage.setItem(STORE,'[]');render();showPage('login');authMessage('Votre compte est créé, mais il attend l’approbation de l’administrateur.','pending');$('signedInText').textContent='Compte en attente : '+user.email;fbUnsubscribe=userRef.onSnapshot(doc=>{if(doc.exists&&doc.data().active===true)location.reload()});return}
+  accountActive=true;authMessage('Connexion réussie. Vos tâches sont associées à votre compte.','ok');if(location.hash==='#login')showPage('dashboard');
   $('profileInfo').textContent='Adresse : '+user.email+' · Rôle : '+(admin?'Administrateur':'Utilisateur')+' · Compte actif';
   fbUnsubscribe=fbDb.collection('users').doc(user.uid).collection('tasks').onSnapshot(async snap=>{
    if(snap.empty&&admin&&!localStorage.getItem('rigoura_fb_migrated_'+user.uid)&&tasks.length){
@@ -359,15 +359,15 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
  $('loginBtn').addEventListener('click',async()=>{if(!firebaseReady()){authMessage('Firebase n’est pas configuré. Renseignez les paramètres ci-dessous.','error');return}try{await fbAuth.signInWithEmailAndPassword($('authEmail').value.trim(),$('authPassword').value)}catch(e){authMessage('Connexion refusée : '+e.message,'error')}});
  $('registerBtn').addEventListener('click',async()=>{if(!firebaseReady()){authMessage('Firebase n’est pas configuré.','error');return}try{if($('authPassword').value.length<8)throw new Error('Le mot de passe doit contenir au moins 8 caractères.');await fbAuth.createUserWithEmailAndPassword($('authEmail').value.trim(),$('authPassword').value);authMessage('Compte créé. Il doit être approuvé par l’administrateur avant utilisation.','pending')}catch(e){authMessage('Création du compte impossible : '+e.message,'error')}});
  $('resetPasswordBtn').addEventListener('click',async()=>{if(!firebaseReady()||!$('authEmail').value.trim()){authMessage('Saisissez votre adresse e-mail.','error');return}try{await fbAuth.sendPasswordResetEmail($('authEmail').value.trim());authMessage('E-mail de réinitialisation envoyé.','ok')}catch(e){authMessage('Envoi impossible : '+e.message,'error')}});
- $('logoutBtn').addEventListener('click',async()=>{if(fbAuth)await fbAuth.signOut();tasks=[];localStorage.setItem(STORE,'[]');render();showPage('login')});
+ $('logoutBtn').addEventListener('click',async()=>{if(fbAuth)await fbAuth.signOut();accountActive=false;authUser=null;tasks=[];localStorage.setItem(STORE,'[]');render();showPage('login')});
  $('profileLink').addEventListener('click',()=>showPage('profile'));$('profileBack').addEventListener('click',()=>showPage('dashboard'));
  $('userRows').addEventListener('click',async e=>{const b=e.target.closest('[data-user-toggle]');if(!b||!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;try{await fbDb.collection('users').doc(b.dataset.userToggle).update({active:b.dataset.active==='true'});await loadAdminUsers()}catch(err){$('adminStatus').textContent='Modification refusée : '+err.message}});
  $('adminNav').addEventListener('click',loadAdminUsers);
 \n if(!initFirebase())authMessage("Firebase n’est pas configuré. Les anciennes tâches restent accessibles sur cet appareil; les comptes ne sont pas encore activés.");
 
  function showPage(name){
-   if(fbConfig.projectId&&!authUser&&name!=='login')name='login';
-   if(name==='admin'&&(!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL))name='dashboard';
+   if(fbConfig.projectId&&!accountActive&&name!=='login')name='login';
+   if(name==='admin'&&(!accountActive||!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL))name='dashboard';
    if(name==='profile'&&!authUser)name='login';
    const allowed=['login','add','dashboard','exports','profile','admin'];
    if(!allowed.includes(name))name='dashboard';
