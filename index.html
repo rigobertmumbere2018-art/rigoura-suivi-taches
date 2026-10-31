@@ -266,7 +266,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
   authMessage('Connexion réussie. Vos tâches sont associées à votre compte.','ok');
   $('profileInfo').textContent='Adresse : '+user.email+' · Rôle : '+(admin?'Administrateur':'Utilisateur')+' · Compte actif';
   fbUnsubscribe=fbDb.collection('users').doc(user.uid).collection('tasks').onSnapshot(async snap=>{
-   if(snap.empty&&!localStorage.getItem('rigoura_fb_migrated_'+user.uid)&&tasks.length){
+   if(snap.empty&&admin&&!localStorage.getItem('rigoura_fb_migrated_'+user.uid)&&tasks.length){
     const batch=fbDb.batch();tasks.forEach(t=>batch.set(fbDb.collection('users').doc(user.uid).collection('tasks').doc(String(t.id)),{task:t,deleted:false,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}));
     await batch.commit();localStorage.setItem('rigoura_fb_migrated_'+user.uid,'1');return;
    }
