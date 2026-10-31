@@ -1,4 +1,4 @@
-const CACHE = "rigoura-suivi-shell-v6";
+const CACHE = "rigoura-suivi-shell-v7";
 const CORE = ["./", "./SuiviTaches.html", "./manifest.webmanifest", "./icons/rigoura-192.png", "./icons/rigoura-512.png"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
