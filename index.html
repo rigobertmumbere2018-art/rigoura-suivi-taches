@@ -262,7 +262,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
   const profile=await userRef.get();
   if(!profile.exists)await userRef.set({email:user.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),active:admin,displayName:user.displayName||''});
   const current=(await userRef.get()).data()||{};
-  if(!admin&&current.active!==true){authMessage('Votre compte est créé, mais il attend l’approbation de l’administrateur.','pending');$('signedInText').textContent='Compte en attente : '+user.email;return}
+  if(!admin&&current.active!==true){authMessage('Votre compte est créé, mais il attend l’approbation de l’administrateur.','pending');$('signedInText').textContent='Compte en attente : '+user.email;fbUnsubscribe=userRef.onSnapshot(doc=>{if(doc.exists&&doc.data().active===true)location.reload()});return}
   authMessage('Connexion réussie. Vos tâches sont associées à votre compte.','ok');
   $('profileInfo').textContent='Adresse : '+user.email+' · Rôle : '+(admin?'Administrateur':'Utilisateur')+' · Compte actif';
   fbUnsubscribe=fbDb.collection('users').doc(user.uid).collection('tasks').onSnapshot(async snap=>{
