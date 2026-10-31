@@ -82,7 +82,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 @media(max-width:650px){.header-row{align-items:flex-start;flex-direction:column}.header-tools{width:100%;justify-content:flex-end}.app-nav{padding:0 10px}.app-nav button{flex:1 1 42%;}}
 
 </style>
-</head>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>\n<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>\n<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>\n</head>
 <body>
 <header>
   <div class="brand">
@@ -100,11 +100,49 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
     <button type="button" data-page-link="add">Ajouter une tâche</button>
     <button type="button" data-page-link="dashboard" aria-current="page">Tableau de bord</button>
     <button type="button" data-page-link="exports">Exportations</button>
+    <button type="button" data-page-link="profile" id="profileNav" hidden>Mon profil</button>
+    <button type="button" data-page-link="admin" id="adminNav" hidden>Administration</button>
   </nav>
   <section id="page-login" class="page-view panel" hidden>
-    <div class="page-intro"><h2>Connexion à votre espace</h2><p class="small">L'espace multi-utilisateur et la validation des comptes sont prévus dans la prochaine étape technique.</p></div>
-    <div class="mail-status pending" role="status">La connexion sécurisée n'est pas encore activée. N'entrez pas de mot de passe ici pour le moment. L'application actuelle conserve son mode de fonctionnement existant pendant la préparation du système de comptes.</div>
-    <button type="button" class="primary" data-page-link="dashboard">Continuer vers l'application actuelle</button>
+    <div class="page-intro"><h2>Connexion à votre espace</h2><p class="small">Chaque membre dispose de son propre compte. Les comptes créés doivent être approuvés par l’administrateur.</p></div>
+    <div id="authNotice" class="mail-status pending" role="status">Configurez le service d’authentification pour activer les comptes.</div>
+    <div id="authForms">
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
+        <div><label for="authEmail">Adresse e-mail</label><input id="authEmail" type="email" autocomplete="username" required></div>
+        <div><label for="authPassword">Mot de passe</label><input id="authPassword" type="password" autocomplete="current-password" minlength="8" required></div>
+      </div>
+      <div class="actions">
+        <button type="button" class="primary" id="loginBtn">Se connecter</button>
+        <button type="button" class="secondary" id="registerBtn">Créer un compte</button>
+        <button type="button" class="secondary" id="resetPasswordBtn">Mot de passe oublié</button>
+      </div>
+    </div>
+    <div id="signedInPanel" hidden>
+      <p id="signedInText"></p>
+      <div class="actions"><button type="button" class="secondary" id="profileLink">Mon profil</button><button type="button" class="danger" id="logoutBtn">Se déconnecter</button></div>
+    </div>
+    <details style="margin-top:18px">
+      <summary>Configuration technique (administrateur)</summary>
+      <p class="small">Renseignez la configuration publique de votre projet Firebase. Elle ne contient pas de mot de passe. Les règles de sécurité du projet doivent aussi être publiées.</p>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">
+        <div><label for="fbApiKey">API Key</label><input id="fbApiKey" autocomplete="off"></div>
+        <div><label for="fbAuthDomain">Auth Domain</label><input id="fbAuthDomain" placeholder="votre-projet.firebaseapp.com"></div>
+        <div><label for="fbProjectId">Project ID</label><input id="fbProjectId"></div>
+        <div><label for="fbAppId">App ID</label><input id="fbAppId"></div>
+      </div>
+      <div class="actions"><button type="button" class="primary" id="saveFirebaseConfig">Enregistrer la configuration</button></div>
+    </details>
+  </section>
+  <section id="page-profile" class="page-view panel" hidden>
+    <h2>Mon profil</h2>
+    <div id="profileInfo" class="mail-status pending">Connectez-vous pour afficher votre profil.</div>
+    <div class="actions"><button type="button" class="secondary" id="profileBack">Retour au tableau de bord</button></div>
+  </section>
+  <section id="page-admin" class="page-view panel" hidden>
+    <h2>Administration des comptes</h2>
+    <p class="small">Approuvez ou suspendez les comptes des membres. Le rôle administrateur est attribué par les règles Firestore à l’adresse administrateur définie dans le dépôt.</p>
+    <div id="adminStatus" class="mail-status pending">Accès réservé à l’administrateur.</div>
+    <div class="table-wrap"><table style="min-width:560px"><thead><tr><th>Adresse e-mail</th><th>Statut</th><th>Action</th></tr></thead><tbody id="userRows"></tbody></table></div>
   </section>
   <section id="page-dashboard" class="page-view">
   <section class="stats no-print">
@@ -201,7 +239,51 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 (function(){
  const $=id=>document.getElementById(id);
  const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
- const STORE='suivi_taches_v1';
+
+ const FB_CONFIG_KEY='rigoura_firebase_config_v1';
+ const FB_ADMIN_EMAIL='rigobertmumbere2018@gmail.com';
+ let fbConfig={};let fbApp=null,fbAuth=null,fbDb=null,fbUnsubscribe=null,authUser=null;
+ try{fbConfig=JSON.parse(localStorage.getItem(FB_CONFIG_KEY)||'{}')}catch(e){}
+ function authMessage(message,kind='pending'){const el=$('authNotice');if(el){el.className='mail-status '+kind;el.textContent=message}}
+ function firebaseReady(){return !!(fbAuth&&fbDb)}
+ function initFirebase(){
+  if(!fbConfig.apiKey||!fbConfig.authDomain||!fbConfig.projectId||!fbConfig.appId)return false;
+  if(!window.firebase)return false;
+  try{fbApp=window.firebase.apps.length?window.firebase.app():window.firebase.initializeApp({apiKey:fbConfig.apiKey,authDomain:fbConfig.authDomain,projectId:fbConfig.projectId,appId:fbConfig.appId});fbAuth=fbApp.auth();fbDb=fbApp.firestore();fbAuth.onAuthStateChanged(handleAuthState);return true}catch(e){authMessage('Configuration Firebase invalide : '+e.message,'error');return false}
+ }
+ async function handleAuthState(user){
+  authUser=user||null;
+  if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null}
+  if(!user){$('authForms').hidden=false;$('signedInPanel').hidden=true;$('profileNav').hidden=true;$('adminNav').hidden=true;authMessage(firebaseReady()?'Connectez-vous pour accéder à vos tâches.':'Configurez Firebase pour activer les comptes.');return}
+  $('authForms').hidden=true;$('signedInPanel').hidden=false;$('signedInText').textContent='Connecté : '+user.email;$('profileNav').hidden=false;
+  const admin=(user.email||'').toLowerCase()===FB_ADMIN_EMAIL;
+  $('adminNav').hidden=!admin;
+  const userRef=fbDb.collection('users').doc(user.uid);
+  const profile=await userRef.get();
+  if(!profile.exists)await userRef.set({email:user.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),active:admin,displayName:user.displayName||''});
+  const current=(await userRef.get()).data()||{};
+  if(!admin&&current.active!==true){authMessage('Votre compte est créé, mais il attend l’approbation de l’administrateur.','pending');$('signedInText').textContent='Compte en attente : '+user.email;return}
+  authMessage('Connexion réussie. Vos tâches sont associées à votre compte.','ok');
+  $('profileInfo').textContent='Adresse : '+user.email+' · Rôle : '+(admin?'Administrateur':'Utilisateur')+' · Compte actif';
+  fbUnsubscribe=fbDb.collection('users').doc(user.uid).collection('tasks').onSnapshot(async snap=>{
+   if(snap.empty&&!localStorage.getItem('rigoura_fb_migrated_'+user.uid)&&tasks.length){
+    const batch=fbDb.batch();tasks.forEach(t=>batch.set(fbDb.collection('users').doc(user.uid).collection('tasks').doc(String(t.id)),{task:t,deleted:false,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}));
+    await batch.commit();localStorage.setItem('rigoura_fb_migrated_'+user.uid,'1');return;
+   }
+   tasks=snap.docs.map(d=>d.data()).filter(x=>x&&!x.deleted&&x.task).map(x=>x.task);localStorage.setItem(STORE,JSON.stringify(tasks));render();
+  },err=>authMessage('Erreur de synchronisation du compte : '+err.message,'error'));
+  if(admin)loadAdminUsers();
+ }
+ async function saveTaskForAccount(task,deleted=false){
+  if(!authUser||!fbDb)return false;
+  const ref=fbDb.collection('users').doc(authUser.uid).collection('tasks').doc(String(task.id));
+  await ref.set({task:deleted?null:task,deleted:!!deleted,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});return true;
+ }
+ async function loadAdminUsers(){
+  if(!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;
+  try{const snap=await fbDb.collection('users').get();$('userRows').innerHTML=snap.docs.map(d=>{const u=d.data()||{};const active=u.active===true;return '<tr><td>'+escapeHtml(u.email||d.id)+'</td><td>'+(active?'Actif':'En attente / suspendu')+'</td><td><button class="secondary" data-user-toggle="'+d.id+'" data-active="'+(!active)+'">'+(active?'Suspendre':'Approuver')+'</button></td></tr>'}).join('')||'<tr><td colspan="3">Aucun compte inscrit.</td></tr>';$('adminStatus').textContent=snap.size+' compte(s) enregistré(s).'}catch(e){$('adminStatus').textContent='Impossible de charger les comptes : '+e.message}
+ }
+\n const STORE='suivi_taches_v1';
  const SYNC_CFG='rigoura_sync_config_v1', SYNC_QUEUE='rigoura_sync_pending_v1';
  let syncCfg=JSON.parse(localStorage.getItem(SYNC_CFG)||'{"url":"","token":""}');
  let syncQueue=JSON.parse(localStorage.getItem(SYNC_QUEUE)||'[]');
@@ -266,10 +348,24 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
   syncCfg={url:url.trim().replace(/\/$/,''),token:token.trim()};localStorage.setItem(SYNC_CFG,JSON.stringify(syncCfg));
   apiCall('ping').then(()=>{updateSyncStatus('Connexion Google vérifiée.');if(confirm('Importer les tâches locales existantes dans Google Sheets ? Choisissez OK uniquement sur le premier appareil contenant les données à conserver.')){tasks.forEach(t=>enqueueSync(t))}syncNow()}).catch(e=>updateSyncStatus('Connexion Google impossible : '+e.message));
  });
- $('syncNow').addEventListener('click',syncNow);
+ $('syncNow').addEventListener('click',syncNow);\n
+ $('saveFirebaseConfig').addEventListener('click',()=>{
+  fbConfig={apiKey:$('fbApiKey').value.trim(),authDomain:$('fbAuthDomain').value.trim(),projectId:$('fbProjectId').value.trim(),appId:$('fbAppId').value.trim()};
+  if(Object.values(fbConfig).some(v=>!v)){authMessage('Tous les champs Firebase sont obligatoires.','error');return}
+  localStorage.setItem(FB_CONFIG_KEY,JSON.stringify(fbConfig));location.reload();
+ });
+ if(fbConfig.apiKey){$('fbApiKey').value=fbConfig.apiKey;$('fbAuthDomain').value=fbConfig.authDomain||'';$('fbProjectId').value=fbConfig.projectId||'';$('fbAppId').value=fbConfig.appId||''}
+ $('loginBtn').addEventListener('click',async()=>{if(!firebaseReady()){authMessage('Firebase n’est pas configuré. Renseignez les paramètres ci-dessous.','error');return}try{await fbAuth.signInWithEmailAndPassword($('authEmail').value.trim(),$('authPassword').value)}catch(e){authMessage('Connexion refusée : '+e.message,'error')}});
+ $('registerBtn').addEventListener('click',async()=>{if(!firebaseReady()){authMessage('Firebase n’est pas configuré.','error');return}try{if($('authPassword').value.length<8)throw new Error('Le mot de passe doit contenir au moins 8 caractères.');await fbAuth.createUserWithEmailAndPassword($('authEmail').value.trim(),$('authPassword').value);authMessage('Compte créé. Il doit être approuvé par l’administrateur avant utilisation.','pending')}catch(e){authMessage('Création du compte impossible : '+e.message,'error')}});
+ $('resetPasswordBtn').addEventListener('click',async()=>{if(!firebaseReady()||!$('authEmail').value.trim()){authMessage('Saisissez votre adresse e-mail.','error');return}try{await fbAuth.sendPasswordResetEmail($('authEmail').value.trim());authMessage('E-mail de réinitialisation envoyé.','ok')}catch(e){authMessage('Envoi impossible : '+e.message,'error')}});
+ $('logoutBtn').addEventListener('click',async()=>{if(fbAuth)await fbAuth.signOut();tasks=[];localStorage.setItem(STORE,'[]');render();showPage('login')});
+ $('profileLink').addEventListener('click',()=>showPage('profile'));$('profileBack').addEventListener('click',()=>showPage('dashboard'));
+ $('userRows').addEventListener('click',async e=>{const b=e.target.closest('[data-user-toggle]');if(!b||!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;try{await fbDb.collection('users').doc(b.dataset.userToggle).update({active:b.dataset.active==='true'});await loadAdminUsers()}catch(err){$('adminStatus').textContent='Modification refusée : '+err.message}});
+ $('adminNav').addEventListener('click',loadAdminUsers);
+\n if(!initFirebase())authMessage("Firebase n’est pas configuré. Les anciennes tâches restent accessibles sur cet appareil; les comptes ne sont pas encore activés.");
 
  function showPage(name){
-   const allowed=['login','add','dashboard','exports'];
+   const allowed=['login','add','dashboard','exports','profile','admin'];
    if(!allowed.includes(name))name='dashboard';
    document.querySelectorAll('.page-view').forEach(el=>{el.hidden=el.id!=='page-'+name});
    document.querySelectorAll('[data-page-link]').forEach(btn=>{
@@ -282,7 +378,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
  }
  document.querySelectorAll('[data-page-link]').forEach(btn=>btn.addEventListener('click',()=>showPage(btn.dataset.pageLink)));
  const initialPage=location.hash.replace('#','');
- showPage(['login','add','dashboard','exports'].includes(initialPage)?initialPage:'dashboard');
+ showPage(['login','add','dashboard','exports','profile','admin'].includes(initialPage)?initialPage:'dashboard');
  $('refreshApp').addEventListener('click',async()=>{
    const b=$('refreshApp');b.disabled=true;b.textContent='Actualisation…';
    try{await syncNow();render();if($('syncStatus'))$('syncStatus').textContent+=' · Actualisé à '+new Date().toLocaleTimeString('fr-FR');}
