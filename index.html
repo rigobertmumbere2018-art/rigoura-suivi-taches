@@ -254,7 +254,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
  async function handleAuthState(user){
   authUser=user||null;
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null}
-  if(!user){$('authForms').hidden=false;$('signedInPanel').hidden=true;$('profileNav').hidden=true;$('adminNav').hidden=true;authMessage(firebaseReady()?'Connectez-vous pour accéder à vos tâches.':'Configurez Firebase pour activer les comptes.');return}
+  if(!user){$('authForms').hidden=false;$('signedInPanel').hidden=true;$('profileNav').hidden=true;$('adminNav').hidden=true;if(fbConfig.projectId)showPage('login');authMessage(firebaseReady()?'Connectez-vous pour accéder à vos tâches.':'Configurez Firebase pour activer les comptes.');return}
   $('authForms').hidden=true;$('signedInPanel').hidden=false;$('signedInText').textContent='Connecté : '+user.email;$('profileNav').hidden=false;
   const admin=(user.email||'').toLowerCase()===FB_ADMIN_EMAIL;
   $('adminNav').hidden=!admin;
@@ -262,8 +262,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
   const profile=await userRef.get();
   if(!profile.exists)await userRef.set({email:user.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),active:admin,displayName:user.displayName||''});
   const current=(await userRef.get()).data()||{};
-  if(!admin&&current.active!==true){authMessage('Votre compte est créé, mais il attend l’approbation de l’administrateur.','pending');$('signedInText').textContent='Compte en attente : '+user.email;fbUnsubscribe=userRef.onSnapshot(doc=>{if(doc.exists&&doc.data().active===true)location.reload()});return}
-  authMessage('Connexion réussie. Vos tâches sont associées à votre compte.','ok');
+  if(!admin&&current.active!==true){showPage('login');authMessage('Votre compte est créé, mais il attend l’approbation de l’administrateur.','pending');$('signedInText').textContent='Compte en attente : '+user.email;fbUnsubscribe=userRef.onSnapshot(doc=>{if(doc.exists&&doc.data().active===true)location.reload()});return}
+  authMessage('Connexion réussie. Vos tâches sont associées à votre compte.','ok');if(location.hash==='#login')showPage('dashboard');
   $('profileInfo').textContent='Adresse : '+user.email+' · Rôle : '+(admin?'Administrateur':'Utilisateur')+' · Compte actif';
   fbUnsubscribe=fbDb.collection('users').doc(user.uid).collection('tasks').onSnapshot(async snap=>{
    if(snap.empty&&admin&&!localStorage.getItem('rigoura_fb_migrated_'+user.uid)&&tasks.length){
