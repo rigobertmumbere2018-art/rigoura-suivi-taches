@@ -321,6 +321,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
   });
  }
  async function syncNow(){
+  if(authUser&&fbDb){updateSyncStatus('Synchronisation privée du compte active.');return}
   if(syncBusy||!syncCfg.url||!syncCfg.token||!navigator.onLine){updateSyncStatus();return}
   syncBusy=true;updateSyncStatus('Synchronisation avec Google Sheets en cours…');
   try{
