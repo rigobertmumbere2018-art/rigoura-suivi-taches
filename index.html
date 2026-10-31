@@ -366,6 +366,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 \n if(!initFirebase())authMessage("Firebase n’est pas configuré. Les anciennes tâches restent accessibles sur cet appareil; les comptes ne sont pas encore activés.");
 
  function showPage(name){
+   if(fbConfig.projectId&&!authUser&&name!=='login')name='login';
+   if(name==='admin'&&(!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL))name='dashboard';
+   if(name==='profile'&&!authUser)name='login';
    const allowed=['login','add','dashboard','exports','profile','admin'];
    if(!allowed.includes(name))name='dashboard';
    document.querySelectorAll('.page-view').forEach(el=>{el.hidden=el.id!=='page-'+name});
