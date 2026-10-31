@@ -113,6 +113,32 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
     <div class="stat"><span>Terminées</span><strong id="doneTotal">0</strong></div>
   </section>
 
+  <section class="panel">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+      <h2 style="margin:0">Tableau de bord</h2>
+      <button class="secondary no-print" id="installApp" hidden>Installer sur le téléphone</button>
+      <div class="actions no-print" style="margin:0">
+        <button class="secondary" id="syncSettings">Configurer la synchronisation</button>
+        <button class="sync-important" id="syncNow"><span class="backup-dot" aria-hidden="true"></span> Synchroniser maintenant</button>
+      </div>
+    </div>
+    <div id="syncStatus" class="mail-status no-print" role="status">Synchronisation non configurée : tâches enregistrées sur cet appareil.</div>
+    <div class="toolbar no-print">
+      <div><label for="search">Rechercher une tâche</label><input id="search" placeholder="Mot-clé dans la description"></div>
+      <div><label for="filterType">Filtrer par type</label><select id="filterType"><option value="">Tous les types</option><option>conception</option><option>correction</option><option>impression</option><option>autres</option></select></div>
+      <div><label for="filterObs">Filtrer par état</label><select id="filterObs"><option value="">Tous les états</option><option>EN COURS</option><option>TERMINÉ</option></select></div>
+      <div><label for="filterDate">Filtrer par date</label><input id="filterDate" type="date"></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>taches</th><th>description</th><th>obs</th><th>date</th><th class="row-actions-col no-print">Actions</th></tr></thead>
+        <tbody id="taskRows"></tbody>
+      </table>
+      <div id="empty" class="empty">Aucune tâche enregistrée. Utilise le formulaire ci-dessus pour commencer.</div>
+    </div>
+    <p class="small no-print" id="resultCount"></p>
+  </section>
+  </section>
   <section id="page-add" class="page-view" hidden>
   <section class="panel form-panel no-print">
     <h2 id="formTitle">Ajouter une tâche</h2>
@@ -144,33 +170,6 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
     </form>
   </section>
 
-  </section>
-
-  <section class="panel">
-    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
-      <h2 style="margin:0">Tableau de bord</h2>
-      <button class="secondary no-print" id="installApp" hidden>Installer sur le téléphone</button>
-      <div class="actions no-print" style="margin:0">
-        <button class="secondary" id="syncSettings">Configurer la synchronisation</button>
-        <button class="sync-important" id="syncNow"><span class="backup-dot" aria-hidden="true"></span> Synchroniser maintenant</button>
-      </div>
-    </div>
-    <div id="syncStatus" class="mail-status no-print" role="status">Synchronisation non configurée : tâches enregistrées sur cet appareil.</div>
-    <div class="toolbar no-print">
-      <div><label for="search">Rechercher une tâche</label><input id="search" placeholder="Mot-clé dans la description"></div>
-      <div><label for="filterType">Filtrer par type</label><select id="filterType"><option value="">Tous les types</option><option>conception</option><option>correction</option><option>impression</option><option>autres</option></select></div>
-      <div><label for="filterObs">Filtrer par état</label><select id="filterObs"><option value="">Tous les états</option><option>EN COURS</option><option>TERMINÉ</option></select></div>
-      <div><label for="filterDate">Filtrer par date</label><input id="filterDate" type="date"></div>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>taches</th><th>description</th><th>obs</th><th>date</th><th class="row-actions-col no-print">Actions</th></tr></thead>
-        <tbody id="taskRows"></tbody>
-      </table>
-      <div id="empty" class="empty">Aucune tâche enregistrée. Utilise le formulaire ci-dessus pour commencer.</div>
-    </div>
-    <p class="small no-print" id="resultCount"></p>
-  </section>
   </section>
   <section id="page-exports" class="page-view" hidden>
     <section class="panel">
