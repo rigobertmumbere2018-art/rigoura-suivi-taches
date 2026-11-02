@@ -363,7 +363,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
  });
  $('syncNow').addEventListener('click',syncNow);
  $('saveFirebaseConfig').addEventListener('click',()=>{
-  fbConfig={apiKey:$('fbApiKey').value.trim(),authDomain:$('fbAuthDomain').value.trim(),projectId:$('fbProjectId').value.trim(),appId:$('fbAppId').value.trim()};
+  fbConfig={apiKey:$('fbApiKey').value.trim().replace('Cnbd3R2Wprvg','Cnbd3R2Wrpvg'),authDomain:$('fbAuthDomain').value.trim(),projectId:$('fbProjectId').value.trim(),appId:$('fbAppId').value.trim()};
   if(Object.values(fbConfig).some(v=>!v)){authMessage('Tous les champs Firebase sont obligatoires.','error');return}
   localStorage.setItem(FB_CONFIG_KEY,JSON.stringify(fbConfig));location.reload();
  });
