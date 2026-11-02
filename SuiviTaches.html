@@ -245,8 +245,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 
  const FB_CONFIG_KEY='rigoura_firebase_config_v1';
  const FB_ADMIN_EMAIL='rigobertmumbere2018@gmail.com';
- let fbConfig={};let fbApp=null,fbAuth=null,fbDb=null,fbUnsubscribe=null,authUser=null,accountActive=false;
- try{fbConfig=JSON.parse(localStorage.getItem(FB_CONFIG_KEY)||'{}')}catch(e){}
+ const FB_DEFAULT_CONFIG={apiKey:'AIzaSyCxx8h35RNE-k59_Cnbd3R2Wrpvg40nwp8',authDomain:'rigoura-suivi-des-taches.firebaseapp.com',projectId:'rigoura-suivi-des-taches',appId:'1:234438457861:web:6f058c1d64c96af6ccfa6c'};
+ let fbConfig={...FB_DEFAULT_CONFIG};let fbApp=null,fbAuth=null,fbDb=null,fbUnsubscribe=null,authUser=null,accountActive=false;
+ try{fbConfig={...FB_DEFAULT_CONFIG,...JSON.parse(localStorage.getItem(FB_CONFIG_KEY)||'{}')}}catch(e){fbConfig={...FB_DEFAULT_CONFIG}}
  function authMessage(message,kind='pending'){const el=$('authNotice');if(el){el.className='mail-status '+kind;el.textContent=message}}
  function firebaseReady(){return !!(fbAuth&&fbDb)}
  function initFirebase(){
