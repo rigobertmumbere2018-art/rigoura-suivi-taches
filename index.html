@@ -28,7 +28,7 @@ h2{font-size:18px;margin:0 0 14px}
 label{display:block;font-weight:600;font-size:13px;margin-bottom:6px;color:#3c5269}
 input,select,textarea{width:100%;padding:10px 11px;border:1px solid #c8d3df;border-radius:7px;background:#fff;color:var(--ink);font:inherit;min-width:0}
 input:focus,select:focus,textarea:focus{outline:2px solid #b8d4f1;border-color:var(--blue)}
- .password-field{display:flex;gap:6px;align-items:stretch}.password-field input{flex:1;min-width:0}.password-toggle{white-space:nowrap;min-width:88px}
+ .password-group{display:block!important;min-width:0}.password-field{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:6px;align-items:stretch;width:100%}.password-field input{width:100%;min-width:0}.password-field .password-toggle{display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center;justify-content:center;white-space:nowrap;min-width:88px;position:static!important}
 textarea{resize:vertical;min-height:42px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 button{border:0;border-radius:7px;padding:10px 14px;font:600 14px "Segoe UI",Arial,sans-serif;cursor:pointer}
@@ -113,7 +113,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
     <div id="authForms">
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
         <div><label for="authEmail">Adresse e-mail</label><input id="authEmail" type="email" autocomplete="username" required></div>
-        <div><label for="authPassword">Mot de passe</label><div class="password-field"><input id="authPassword" type="password" autocomplete="current-password" minlength="8" required><button type="button" class="password-toggle secondary" id="togglePassword" aria-label="Afficher le mot de passe" aria-pressed="false">Afficher</button></div></div>
+        <div class="password-group"><label for="authPassword">Mot de passe</label><div class="password-field"><input id="authPassword" type="password" autocomplete="current-password" minlength="8" required><button type="button" class="password-toggle secondary" id="togglePassword" aria-label="Afficher le mot de passe" aria-pressed="false">Afficher</button></div></div>
       </div>
       <div class="actions">
         <button type="button" class="primary" id="loginBtn">Se connecter</button>
