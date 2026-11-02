@@ -82,7 +82,10 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 @media(max-width:650px){.header-row{align-items:flex-start;flex-direction:column}.header-tools{width:100%;justify-content:flex-end}.app-nav{padding:0 10px}.app-nav button{flex:1 1 42%;}}
 
 </style>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>\n<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>\n<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>\n</head>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
 <body>
 <header>
   <div class="brand">
@@ -283,7 +286,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
   if(!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;
   try{const snap=await fbDb.collection('users').get();$('userRows').innerHTML=snap.docs.map(d=>{const u=d.data()||{};const active=u.active===true;return '<tr><td>'+escapeHtml(u.email||d.id)+'</td><td>'+(active?'Actif':'En attente / suspendu')+'</td><td><button class="secondary" data-user-toggle="'+d.id+'" data-active="'+(!active)+'">'+(active?'Suspendre':'Approuver')+'</button></td></tr>'}).join('')||'<tr><td colspan="3">Aucun compte inscrit.</td></tr>';$('adminStatus').textContent=snap.size+' compte(s) enregistré(s).'}catch(e){$('adminStatus').textContent='Impossible de charger les comptes : '+e.message}
  }
-\n const STORE='suivi_taches_v1';
+
+ const STORE='suivi_taches_v1';
  const SYNC_CFG='rigoura_sync_config_v1', SYNC_QUEUE='rigoura_sync_pending_v1';
  let syncCfg=JSON.parse(localStorage.getItem(SYNC_CFG)||'{"url":"","token":""}');
  let syncQueue=JSON.parse(localStorage.getItem(SYNC_QUEUE)||'[]');
@@ -300,6 +304,12 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
  $('date').value=today();
  function persist(){localStorage.setItem(STORE,JSON.stringify(tasks));render()}
  function enqueueSync(task,deleted=false){
+   if(authUser&&fbDb&&accountActive){
+    saveTaskForAccount(task,deleted)
+     .then(()=>updateSyncStatus('Tâche enregistrée dans votre espace privé.'))
+     .catch(err=>authMessage('Enregistrement impossible : '+err.message,'error'));
+    return;
+   }
    const op={opId:crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2),id:String(task.id),deleted,task:deleted?null:task};
    syncQueue.push(op);localStorage.setItem(SYNC_QUEUE,JSON.stringify(syncQueue));updateSyncStatus();
    if(navigator.onLine)syncNow();
@@ -349,7 +359,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
   syncCfg={url:url.trim().replace(/\/$/,''),token:token.trim()};localStorage.setItem(SYNC_CFG,JSON.stringify(syncCfg));
   apiCall('ping').then(()=>{updateSyncStatus('Connexion Google vérifiée.');if(confirm('Importer les tâches locales existantes dans Google Sheets ? Choisissez OK uniquement sur le premier appareil contenant les données à conserver.')){tasks.forEach(t=>enqueueSync(t))}syncNow()}).catch(e=>updateSyncStatus('Connexion Google impossible : '+e.message));
  });
- $('syncNow').addEventListener('click',syncNow);\n
+ $('syncNow').addEventListener('click',syncNow);
  $('saveFirebaseConfig').addEventListener('click',()=>{
   fbConfig={apiKey:$('fbApiKey').value.trim(),authDomain:$('fbAuthDomain').value.trim(),projectId:$('fbProjectId').value.trim(),appId:$('fbAppId').value.trim()};
   if(Object.values(fbConfig).some(v=>!v)){authMessage('Tous les champs Firebase sont obligatoires.','error');return}
@@ -363,7 +373,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
  $('profileLink').addEventListener('click',()=>showPage('profile'));$('profileBack').addEventListener('click',()=>showPage('dashboard'));
  $('userRows').addEventListener('click',async e=>{const b=e.target.closest('[data-user-toggle]');if(!b||!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;try{await fbDb.collection('users').doc(b.dataset.userToggle).update({active:b.dataset.active==='true'});await loadAdminUsers()}catch(err){$('adminStatus').textContent='Modification refusée : '+err.message}});
  $('adminNav').addEventListener('click',loadAdminUsers);
-\n if(!initFirebase())authMessage("Firebase n’est pas configuré. Les anciennes tâches restent accessibles sur cet appareil; les comptes ne sont pas encore activés.");
+
+ if(!initFirebase())authMessage("Firebase n’est pas configuré. Les anciennes tâches restent accessibles sur cet appareil; les comptes ne sont pas encore activés.");
 
  function showPage(name){
    if(fbConfig.projectId&&!accountActive&&name!=='login')name='login';
@@ -455,9 +466,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
   if(url===null)return;
   const token=prompt('Jeton d’accès de l’API (ne pas utiliser le mot de passe Gmail) :',mailConfig.token||'');
   if(token===null)return;
- let mailConfig={url:'',token:''};
+  if(!/^https:\/\/.+/i.test(url.trim())||!token.trim()){setMailStatus('Adresse HTTPS ou jeton invalide.','error');return}
+  mailConfig={url:url.trim().replace(/\/$/,''),token:token.trim()};
   localStorage.setItem(MAIL_CONFIG,JSON.stringify(mailConfig));
-  if(!mailConfig.url||!mailConfig.token){setMailStatus('Envoi e-mail non configuré. Les sauvegardes restent locales et en attente.','pending');return}
   setMailStatus('Configuration enregistrée. Vérification de l’envoi…','pending');
   processMailQueue();
  });
