@@ -28,6 +28,7 @@ h2{font-size:18px;margin:0 0 14px}
 label{display:block;font-weight:600;font-size:13px;margin-bottom:6px;color:#3c5269}
 input,select,textarea{width:100%;padding:10px 11px;border:1px solid #c8d3df;border-radius:7px;background:#fff;color:var(--ink);font:inherit;min-width:0}
 input:focus,select:focus,textarea:focus{outline:2px solid #b8d4f1;border-color:var(--blue)}
+ .password-field{display:flex;gap:6px;align-items:stretch}.password-field input{flex:1;min-width:0}.password-toggle{white-space:nowrap;min-width:88px}
 textarea{resize:vertical;min-height:42px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 button{border:0;border-radius:7px;padding:10px 14px;font:600 14px "Segoe UI",Arial,sans-serif;cursor:pointer}
@@ -112,7 +113,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
     <div id="authForms">
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
         <div><label for="authEmail">Adresse e-mail</label><input id="authEmail" type="email" autocomplete="username" required></div>
-        <div><label for="authPassword">Mot de passe</label><input id="authPassword" type="password" autocomplete="current-password" minlength="8" required></div>
+        <div><label for="authPassword">Mot de passe</label><div class="password-field"><input id="authPassword" type="password" autocomplete="current-password" minlength="8" required><button type="button" class="password-toggle secondary" id="togglePassword" aria-label="Afficher le mot de passe" aria-pressed="false">Afficher</button></div></div>
       </div>
       <div class="actions">
         <button type="button" class="primary" id="loginBtn">Se connecter</button>
@@ -245,7 +246,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 
  const FB_CONFIG_KEY='rigoura_firebase_config_v1';
  const FB_ADMIN_EMAIL='rigobertmumbere2018@gmail.com';
- const FB_DEFAULT_CONFIG={apiKey:'AIzaSyCxx8h35RNE-k59_Cnbd3R2Wrpvg40nwp8',authDomain:'rigoura-suivi-des-taches.firebaseapp.com',projectId:'rigoura-suivi-des-taches',appId:'1:234438457861:web:6f058c1d64c96af6ccfa6c'};
+ const FB_DEFAULT_CONFIG={apiKey:'AIzaSyCxx8h35RNE-k59_Cnbd3R2Wprvg40nwp8',authDomain:'rigoura-suivi-des-taches.firebaseapp.com',projectId:'rigoura-suivi-des-taches',appId:'1:234438457861:web:6f058c1d64c96af6ccfa6c'};
  let fbConfig={...FB_DEFAULT_CONFIG};let fbApp=null,fbAuth=null,fbDb=null,fbUnsubscribe=null,authUser=null,accountActive=false;
  // La configuration du projet est intégrée au déploiement : ne pas laisser une ancienne clé locale la remplacer.
  function authMessage(message,kind='pending'){const el=$('authNotice');if(el){el.className='mail-status '+kind;el.textContent=message}}
@@ -367,7 +368,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
   localStorage.setItem(FB_CONFIG_KEY,JSON.stringify(fbConfig));location.reload();
  });
  if(fbConfig.apiKey){$('fbApiKey').value=fbConfig.apiKey;$('fbAuthDomain').value=fbConfig.authDomain||'';$('fbProjectId').value=fbConfig.projectId||'';$('fbAppId').value=fbConfig.appId||''}
- $('loginBtn').addEventListener('click',async()=>{if(!firebaseReady()){authMessage('Firebase n’est pas configuré. Renseignez les paramètres ci-dessous.','error');return}try{await fbAuth.signInWithEmailAndPassword($('authEmail').value.trim(),$('authPassword').value)}catch(e){authMessage('Connexion refusée : '+e.message,'error')}});
+ $('togglePassword').addEventListener('click',()=>{const field=$('authPassword'),show=field.type==='password';field.type=show?'text':'password';$('togglePassword').textContent=show?'Masquer':'Afficher';$('togglePassword').setAttribute('aria-label',show?'Masquer le mot de passe':'Afficher le mot de passe');$('togglePassword').setAttribute('aria-pressed',String(show))});
+  $('loginBtn').addEventListener('click',async()=>{if(!firebaseReady()){authMessage('Firebase n’est pas configuré. Renseignez les paramètres ci-dessous.','error');return}try{await fbAuth.signInWithEmailAndPassword($('authEmail').value.trim(),$('authPassword').value)}catch(e){authMessage('Connexion refusée : '+e.message,'error')}});
  $('registerBtn').addEventListener('click',async()=>{if(!firebaseReady()){authMessage('Firebase n’est pas configuré.','error');return}try{if($('authPassword').value.length<8)throw new Error('Le mot de passe doit contenir au moins 8 caractères.');await fbAuth.createUserWithEmailAndPassword($('authEmail').value.trim(),$('authPassword').value);authMessage('Compte créé. Il doit être approuvé par l’administrateur avant utilisation.','pending')}catch(e){authMessage('Création du compte impossible : '+e.message,'error')}});
  $('resetPasswordBtn').addEventListener('click',async()=>{if(!firebaseReady()||!$('authEmail').value.trim()){authMessage('Saisissez votre adresse e-mail.','error');return}try{await fbAuth.sendPasswordResetEmail($('authEmail').value.trim());authMessage('E-mail de réinitialisation envoyé.','ok')}catch(e){authMessage('Envoi impossible : '+e.message,'error')}});
  $('logoutBtn').addEventListener('click',async()=>{if(fbAuth)await fbAuth.signOut();accountActive=false;authUser=null;tasks=[];localStorage.setItem(STORE,'[]');render();showPage('login')});
