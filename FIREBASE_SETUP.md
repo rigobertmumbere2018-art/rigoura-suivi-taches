@@ -1,26 +1,49 @@
-# Activation des comptes Rigoura Suivi des tâches
+# Activation des comptes — Rigoura Suivi des tâches
 
-L'application utilise Firebase Authentication et Cloud Firestore pour fournir une authentification réelle et séparer les tâches par compte. Les paramètres Firebase du navigateur sont des identifiants publics de projet, pas des mots de passe.
+Le projet Firebase utilisé par l'application est déjà intégré au code publié sur GitHub Pages.
 
-## 1. Créer le projet Firebase
-1. Ouvrir https://console.firebase.google.com/ et créer un projet.
-2. Dans **Authentication > Sign-in method**, activer **E-mail/Password**.
-3. Dans **Firestore Database**, créer la base de données en mode production.
-4. Dans les paramètres du projet, ajouter une application Web et récupérer les valeurs `apiKey`, `authDomain`, `projectId` et `appId`.
+- Projet Firebase : `rigoura-suivi-des-taches`
+- Domaine d'authentification : `rigoura-suivi-des-taches.firebaseapp.com`
+- Région Firestore : `africa-south1`
+- Administrateur initial : `rigobertmumbere2018@gmail.com`
 
-## 2. Publier les règles de sécurité
-Dans **Firestore Database > Rules**, remplacer les règles par le contenu du fichier `firestore.rules` de ce dépôt et publier.
-L'adresse administrateur initiale prévue par ces règles est **rigobertmumbere2018@gmail.com**. Le premier compte créé avec cette adresse obtient le statut administrateur automatiquement. Les autres comptes restent en attente jusqu'à leur approbation depuis la page Administration.
+## 1. Vérifier la méthode de connexion
 
-## 3. Configurer l'application
-Dans l'application, ouvrir **Connexion > Configuration technique**, renseigner les quatre valeurs de l'application Web Firebase et enregistrer. Faire cette configuration sur chaque appareil utilisé (ordinateur et téléphone).
+Dans la console Firebase, ouvrir **Authentication > Méthode de connexion** et vérifier que **Adresse e-mail/Mot de passe** est activé.
 
-## 4. Comptes et données
-- Les inscriptions utilisent une adresse e-mail et un mot de passe d'au moins 8 caractères.
-- L'administrateur approuve ou suspend les comptes.
-- Chaque compte actif ne peut lire et modifier que ses propres tâches dans Firestore.
-- Lors de la première connexion de l'administrateur, les tâches locales présentes sur cet appareil sont importées dans son espace si son espace distant est vide.
-- Les anciennes données Google Sheets ne sont pas automatiquement partagées entre les nouveaux comptes. Conserver la feuille existante comme archive pendant la migration.
+## 2. Autoriser le domaine GitHub Pages
 
-## Important
-La configuration Firebase et la publication des règles doivent être effectuées dans la console du propriétaire du projet. Le dépôt contient le code et les règles, mais ne peut pas créer le projet Firebase ni publier des règles à la place du propriétaire.
+Dans **Authentication > Paramètres > Domaines autorisés**, ajouter :
+
+`rigobertmumbere2018-art.github.io`
+
+Sans ce domaine, Firebase Authentication peut refuser les connexions depuis le site publié.
+
+## 3. Publier les règles Firestore
+
+Dans **Cloud Firestore > Règles** :
+1. Ouvrir le fichier `firestore.rules` de ce dépôt.
+2. Copier tout son contenu.
+3. Le coller dans l'éditeur de règles de Firestore.
+4. Cliquer sur **Publier**.
+
+**Attention :** enregistrer le fichier dans GitHub ne publie pas automatiquement les règles dans Firebase. Cette étape doit être faite dans la console Firebase du projet.
+
+Les règles autorisent chaque membre actif à accéder uniquement à ses propres tâches. L'administrateur peut consulter les comptes et les approuver ou les suspendre.
+
+## 4. Créer le compte administrateur
+
+Ouvrir l'application et créer le compte avec l'adresse administrateur indiquée ci-dessus. Ce compte reçoit le rôle administrateur automatiquement. Les autres inscriptions restent en attente jusqu'à leur approbation depuis la page **Administration**.
+
+## 5. Tester l'application
+
+Après publication des règles et autorisation du domaine :
+1. Recharger l'application.
+2. Se connecter avec le compte administrateur.
+3. Créer un compte de collaborateur avec une autre adresse.
+4. Approuver ce compte depuis **Administration**.
+5. Se connecter avec le compte collaborateur et vérifier qu'il ne voit que ses propres tâches.
+
+## Données historiques
+
+Les anciennes données Google Sheets ne sont pas automatiquement transférées dans les comptes des collaborateurs. Lors de la première connexion de l'administrateur, les tâches locales présentes sur son appareil peuvent être importées dans son espace Firebase si celui-ci est vide. Conserver la feuille Google Sheets comme archive pendant la migration.
