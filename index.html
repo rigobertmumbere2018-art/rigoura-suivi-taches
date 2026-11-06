@@ -32,7 +32,17 @@ input:focus,select:focus,textarea:focus{outline:2px solid #b8d4f1;border-color:v
 textarea{resize:vertical;min-height:42px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 button{border:0;border-radius:7px;padding:10px 14px;font:600 14px "Segoe UI",Arial,sans-serif;cursor:pointer}
-.primary{background:var(--green);color:white}.secondary{background:#e8eef5;color:#29445f}.danger{background:#fce8e6;color:var(--red)}button:hover{filter:brightness(.97)}
+.primary{background:var(--green);color:white}.secondary{background:#e8eef5;color:#29445f}.danger{background:#fce8e6;color:var(--red)}button{transition:transform .18s ease,box-shadow .18s ease,filter .18s ease,background-color .18s ease}
+button:hover{filter:brightness(1.06);transform:translateY(-2px);box-shadow:0 5px 13px rgba(5,12,55,.16)}
+button:active{transform:translateY(0) scale(.97);box-shadow:0 2px 5px rgba(5,12,55,.12)}
+button:focus-visible{outline:3px solid #78d8ef;outline-offset:3px}
+button:disabled{cursor:not-allowed;opacity:.6;transform:none;box-shadow:none}
+.app-nav button:hover{background:#eef1ff;color:#151078;border-color:#aaa9e8}
+.app-nav button[aria-current="page"]:hover{background:#211a91;color:#fff}
+.primary:hover,.refresh-top:hover{filter:brightness(1.12)}
+.danger:hover{background:#fbd7d3;color:#8f1c14}
+.secondary:hover{background:#dce7f5;color:#172f50}
+@media(prefers-reduced-motion:reduce){button{transition:none!important}button:hover,button:active{transform:none!important}}
 .sync-important{position:relative;display:inline-flex;align-items:center;gap:9px;background:#168447;color:#fff;border:1px solid #0e7139;box-shadow:0 0 0 0 rgba(22,132,71,.55);font-weight:750;animation:syncPulse 1.25s infinite;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
 .sync-important:hover{background:#0f7139;filter:none;transform:translateY(-1px);box-shadow:0 5px 14px rgba(22,132,71,.25)}
 .sync-important:focus-visible{outline:3px solid #91e6b2;outline-offset:3px}
