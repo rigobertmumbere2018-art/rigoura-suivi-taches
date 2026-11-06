@@ -81,6 +81,22 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 .refresh-top:disabled{opacity:.65;cursor:wait}
 .page-intro{margin-bottom:16px}
 @media(max-width:650px){.header-row{align-items:flex-start;flex-direction:column}.header-tools{width:100%;justify-content:flex-end}.app-nav{padding:0 10px}.app-nav button{flex:1 1 42%;}}
+#printArea{display:none}
+@media print{
+ @page{size:A4 portrait;margin:14mm}
+ body>*:not(#printArea){display:none!important}
+ #printArea{display:block!important;color:#172033;background:#fff;font:11pt/1.45 "Segoe UI",Arial,sans-serif}
+ #printArea h1{font-size:19pt;margin:0 0 3mm;color:#10085f}
+ #printArea .print-subtitle{font-size:9pt;color:#536579;margin-bottom:7mm}
+ #printArea .print-meta{font-size:9pt;color:#536579;margin:0 0 5mm}
+ #printArea table{width:100%;border-collapse:collapse;min-width:0;font-size:9pt}
+ #printArea thead{display:table-header-group}
+ #printArea th{background:#151078!important;color:#fff!important;text-align:left;padding:8px;border:1px solid #151078;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ #printArea td{padding:7px;border:1px solid #cbd3df;vertical-align:top;overflow-wrap:anywhere}
+ #printArea tr{break-inside:avoid}
+ #printArea tbody tr:nth-child(even){background:#f0f4fa!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ #printArea .print-footer{margin-top:8mm;padding-top:3mm;border-top:1px solid #cbd3df;font-size:8pt;color:#667085;text-align:center}
+}
 
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -239,6 +255,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
     <div class="footer-note">Les données sont conservées localement et, après configuration, synchronisées avec le serveur sécurisé.</div>
   </footer>
 </main>
+<section id="printArea" aria-hidden="true"></section>
 <script>
 (function(){
  const $=id=>document.getElementById(id);
@@ -450,7 +467,12 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
   const csv='\ufeff'+data.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});download(blob,'suivi_taches_'+today()+'.csv');
  });
- $('exportPrint').addEventListener('click',()=>window.print());
+ $('exportPrint').addEventListener('click',()=>{
+  const ordered=tasks.slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||(Number(a.created)||0)-(Number(b.created)||0));
+  const printRows=ordered.map(t=>`<tr><td>${escapeHtml(t.type||'')}</td><td>${escapeHtml(t.description||'')}</td><td>${escapeHtml(t.obs||'')}</td><td>${escapeHtml(formatDate(t.date))}</td></tr>`).join('');
+  $('printArea').innerHTML=`<h1>RIGOURA DESIGN — Suivi des tâches</h1><div class="print-subtitle">RIGOBERT MUMBERE · GRAPHIC &amp; MOTION DESIGNER</div><p class="print-meta">Liste complète : ${ordered.length} tâche(s) · Document généré le ${new Date().toLocaleString('fr-FR')}</p><table><thead><tr><th>Type</th><th>Description</th><th>État</th><th>Date</th></tr></thead><tbody>${printRows||'<tr><td colspan="4">Aucune tâche enregistrée.</td></tr>'}</tbody></table><div class="print-footer">RIGOURA DESIGN · Suivi des tâches · Tous droits réservés</div>`;
+  window.print();
+ });
  $('backup').addEventListener('click',async()=>{
   // Toujours créer une copie locale Excel-compatible en CSV.
   const rows=[['taches','description','obs','date'],...tasks.slice().sort((a,b)=>a.date.localeCompare(b.date)||a.created-b.created).map(t=>[t.type,t.description,t.obs,formatDate(t.date)])];
