@@ -180,7 +180,11 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
   <section id="page-profile" class="page-view panel" hidden>
     <h2>Mon profil</h2>
     <div id="profileInfo" class="mail-status pending">Connectez-vous pour afficher votre profil.</div>
-    <div class="actions"><button type="button" class="secondary" id="profileBack">Retour au tableau de bord</button></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
+      <div><label for="profileDisplayName">Nom et prénom</label><input id="profileDisplayName" type="text" maxlength="80" placeholder="Votre nom complet"></div>
+      <div><label for="profileProfessions">Profession(s)</label><input id="profileProfessions" type="text" maxlength="160" placeholder="Ex. Graphiste, photographe, développeur"></div>
+    </div>
+    <div class="actions"><button type="button" class="primary" id="saveProfile">Enregistrer mon profil</button><button type="button" class="secondary" id="profileBack">Retour au tableau de bord</button></div>
   </section>
   <section id="page-admin" class="page-view panel" hidden>
     <h2>Administration des comptes</h2>
@@ -313,6 +317,8 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
   const displayName=String(current.displayName||user.displayName||'').trim();
   const professions=String(current.professions||'').trim();
   $('brandUserSubtitle').textContent=[displayName||user.email,professions].filter(Boolean).join(' · ');
+  $('profileDisplayName').value=displayName;
+  $('profileProfessions').value=professions;
   $('profileInfo').textContent='Nom : '+(displayName||'Non renseigné')+' · Profession(s) : '+(professions||'Non renseignée(s)')+' · Adresse : '+user.email+' · Rôle : '+(admin?'Administrateur':'Utilisateur')+' · Compte actif';
   fbUnsubscribe=fbDb.collection('users').doc(user.uid).collection('tasks').onSnapshot(async snap=>{
    if(snap.empty&&admin&&!localStorage.getItem('rigoura_fb_migrated_'+user.uid)&&tasks.length){
@@ -426,6 +432,16 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
  $('resetPasswordBtn').addEventListener('click',async()=>{if(!firebaseReady()||!$('authEmail').value.trim()){authMessage('Saisissez votre adresse e-mail.','error');return}try{await fbAuth.sendPasswordResetEmail($('authEmail').value.trim());authMessage('E-mail de réinitialisation envoyé.','ok')}catch(e){authMessage('Envoi impossible : '+e.message,'error')}});
  $('logoutBtn').addEventListener('click',async()=>{if(fbAuth)await fbAuth.signOut();accountActive=false;authUser=null;tasks=[];localStorage.setItem(STORE,'[]');render();showPage('login')});
  $('profileLink').addEventListener('click',()=>showPage('profile'));$('profileBack').addEventListener('click',()=>showPage('dashboard'));
+ $('saveProfile').addEventListener('click',async()=>{
+  if(!authUser||!fbDb){authMessage('Connectez-vous pour modifier votre profil.','error');return}
+  const displayName=$('profileDisplayName').value.trim(),professions=$('profileProfessions').value.trim();
+  if(!displayName||!professions){$('profileInfo').textContent='Veuillez renseigner votre nom et au moins une profession.';return}
+  try{
+   await fbDb.collection('users').doc(authUser.uid).update({displayName,professions});
+   $('brandUserSubtitle').textContent=displayName+' · '+professions;
+   $('profileInfo').textContent='Profil professionnel mis à jour.';
+  }catch(e){$('profileInfo').textContent='Mise à jour impossible : '+e.message}
+ });
  $('userRows').addEventListener('click',async e=>{const b=e.target.closest('[data-user-toggle]');if(!b||!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;try{await fbDb.collection('users').doc(b.dataset.userToggle).update({active:b.dataset.active==='true'});await loadAdminUsers()}catch(err){$('adminStatus').textContent='Modification refusée : '+err.message}});
  $('adminNav').addEventListener('click',loadAdminUsers);
 
