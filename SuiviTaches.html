@@ -66,6 +66,11 @@ tbody td{padding:9px 10px;border-bottom:1px solid white;border-right:1px solid w
 tbody tr:nth-child(odd){background:#eefbfc}tbody tr:nth-child(even){background:#d9f2f5}
 tbody tr:last-child td{border-bottom:0}
 .badge{display:inline-block;border-radius:5px;padding:3px 7px;background:#fff9;font-size:12px;font-weight:700;white-space:nowrap}
+.urgent-badge{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+.normal-badge{background:#e8eef5;color:#40536a}
+.urgent-mark{background:#b42318;color:#fff;padding:6px 9px;font-size:12px}
+.urgent-remove{background:#fff0d5;color:#8a4b08;padding:6px 9px;font-size:12px}
+
 .row-actions{display:flex;gap:6px}.row-actions button{padding:6px 9px;font-size:12px}
 .empty{text-align:center;padding:28px;color:var(--muted);background:#f8fafc}
 .small{font-size:12px;color:var(--muted);margin-top:10px}
@@ -221,7 +226,7 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Type</th><th>Description</th><th>État</th><th>Date</th><th>Exécutant</th><th class="row-actions-col no-print">Actions</th></tr></thead>
+        <thead><tr><th>Type</th><th>Description</th><th>État</th><th>Date</th><th>Exécutant</th><th>Priorité</th><th class="row-actions-col no-print">Actions</th></tr></thead>
         <tbody id="taskRows"></tbody>
       </table>
       <div id="empty" class="empty">Aucune tâche enregistrée. Utilise le formulaire ci-dessus pour commencer.</div>
@@ -539,7 +544,8 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
   $('taskRows').innerHTML=rows.map(t=>`<tr>
    <td><span class="badge">${escapeHtml(t.type)}</span></td>
    <td>${escapeHtml(t.description)}</td><td>${escapeHtml(t.obs)}</td><td>${escapeHtml(formatDate(t.date))}</td><td>${escapeHtml(t._ownerName||"—")}</td>
-   <td class="row-actions-col no-print">${readOnly?'<span class="badge">Lecture seule</span>':'<div class="row-actions"><button class="secondary" data-edit="'+escapeHtml(t.id)+'">Modifier</button><button class="danger" data-delete="'+escapeHtml(t.id)+'">Supprimer</button></div>'}</td>
+   <td>${t.urgent?'<span class="badge urgent-badge">URGENTE</span>':'<span class="badge normal-badge">Normale</span>'}</td>
+   <td class="row-actions-col no-print">${supervisorMode?'<button class="'+(t.urgent?'urgent-remove':'urgent-mark')+'" data-urgent-toggle="'+escapeHtml(t.id)+'" aria-pressed="'+(t.urgent?'true':'false')+'">'+(t.urgent?'Retirer urgence':'Marquer urgente')+'</button>':readOnly?'<span class="badge">Lecture seule</span>':'<div class="row-actions"><button class="secondary" data-edit="'+escapeHtml(t.id)+'">Modifier</button><button class="danger" data-delete="'+escapeHtml(t.id)+'">Supprimer</button></div>'}</td>
   </tr>`).join('');
   $('empty').style.display=rows.length?'none':'block';
   $('resultCount').textContent=`${rows.length} tâche(s) affichée(s) sur ${tasks.length}.`;
@@ -558,7 +564,32 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
  function cancelEdit(){editingId=null;$('formTitle').textContent='Ajouter une tâche';$('saveBtn').textContent='Enregistrer la tâche';$('cancelEdit').hidden=true;$('taskForm').reset();$('date').value=today()}
  $('cancelEdit').addEventListener('click',cancelEdit);
  $('resetBtn').addEventListener('click',()=>setTimeout(()=>{if(editingId===null)$('date').value=today()},0));
- $('taskRows').addEventListener('click',e=>{
+ $('taskRows').addEventListener('click',async e=>{
+  const urgency=e.target.closest('[data-urgent-toggle]');
+  if(urgency){
+   if(!supervisorMode||!authUser||!fbDb)return;
+   const task=tasks.find(x=>String(x.id)===String(urgency.dataset.urgentToggle));
+   if(!task||!task._ownerUid)return;
+   const nextUrgent=!task.urgent;
+   urgency.disabled=true;
+   try{
+    const ref=fbDb.collection('users').doc(task._ownerUid).collection('tasks').doc(String(task.id));
+    await ref.update({
+     'task.urgent':nextUrgent,
+     'task.urgentBy':authUser.email||'Superviseur',
+     'task.urgentAt':new Date().toISOString(),
+     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    const index=tasks.findIndex(x=>String(x.id)===String(task.id));
+    if(index>=0)tasks[index]={...tasks[index],urgent:nextUrgent,urgentBy:authUser.email||'Superviseur',urgentAt:new Date().toISOString()};
+    persist();
+    updateSyncStatus(nextUrgent?'Tâche marquée urgente et synchronisée.':'Marquage urgent retiré et synchronisé.');
+   }catch(err){
+    authMessage('Impossible de modifier la priorité : '+err.message,'error');
+    urgency.disabled=false;
+   }
+   return;
+  }
   const edit=e.target.closest('[data-edit]'),del=e.target.closest('[data-delete]');
   if(edit){const t=tasks.find(x=>x.id===edit.dataset.edit);if(!t)return;editingId=t.id;$('type').value=t.type;$('description').value=t.description;$('obs').value=t.obs;$('date').value=t.date;$('formTitle').textContent='Modifier la tâche';$('saveBtn').textContent='Enregistrer les modifications';$('cancelEdit').hidden=false;window.scrollTo({top:0,behavior:'smooth'})}
   if(del){const t=tasks.find(x=>x.id===del.dataset.delete);if(t&&confirm(`Supprimer cette tâche : « ${t.description} » ?`)){tasks=tasks.filter(x=>x.id!==t.id);if(editingId===t.id)cancelEdit();persist();enqueueSync(t,true)}}
