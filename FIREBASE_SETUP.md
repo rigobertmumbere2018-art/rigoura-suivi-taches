@@ -29,7 +29,7 @@ Dans **Cloud Firestore > Règles** :
 
 **Attention :** enregistrer le fichier dans GitHub ne publie pas automatiquement les règles dans Firebase. Cette étape doit être faite dans la console Firebase du projet.
 
-Les règles autorisent chaque membre actif à accéder uniquement à ses propres tâches. L'administrateur peut consulter les comptes et les approuver ou les suspendre.
+Les règles autorisent chaque membre actif à accéder uniquement à ses propres tâches. Un compte « Agent de supervision » actif peut consulter toutes les tâches, sans les modifier. Le Super Admin peut consulter et gérer l'ensemble des tâches, approuver ou suspendre les comptes et attribuer les rôles.
 
 ## 4. Créer le compte administrateur
 
@@ -46,4 +46,4 @@ Après publication des règles et autorisation du domaine :
 
 ## Données historiques
 
-Les anciennes données Google Sheets ne sont pas automatiquement transférées dans les comptes des collaborateurs. Lors de la première connexion de l'administrateur, les tâches locales présentes sur son appareil peuvent être importées dans son espace Firebase si celui-ci est vide. Conserver la feuille Google Sheets comme archive pendant la migration.
+Les anciennes données Google Sheets ne sont pas automatiquement transférées. Lors de la première connexion du Super Admin, les tâches encore présentes dans le stockage local de son navigateur sont copiées dans son espace Firebase si celui-ci est vide. Cette récupération ne supprime pas les données locales en cas d'échec. Les tâches déjà présentes dans Firebase restent prioritaires. Conserver la feuille Google Sheets et toute sauvegarde locale comme archives pendant la migration.
