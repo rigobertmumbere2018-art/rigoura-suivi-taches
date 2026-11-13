@@ -315,7 +315,7 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
   $('adminNav').hidden=!admin;
   const userRef=fbDb.collection('users').doc(user.uid);
   const profile=await userRef.get();
-  if(!profile.exists)await userRef.set({email:user.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),active:admin,displayName:user.displayName||'',role:admin?'superadmin':'member'});
+  if(!profile.exists&&!localStorage.getItem('rigoura_registration_in_progress'))await userRef.set({email:user.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),active:admin,displayName:user.displayName||'',role:admin?'superadmin':'member'});
   const current=(await userRef.get()).data()||{};
   currentRole=admin?'superadmin':String(current.role||'member');supervisorMode=!admin&&currentRole==='supervisor';$('addNav').hidden=supervisorMode;$('brandTitle').textContent=(String(current.displayName||user.displayName||user.email||'').trim()||'Agent')+' — Suivi des tâches';
   if(!admin&&current.active!==true){tasks=[];localStorage.setItem(STORE,'[]');render();showPage('login');authMessage('Votre compte est créé, mais il attend l’approbation de l’administrateur.','pending');$('signedInText').textContent='Compte en attente : '+user.email;fbUnsubscribe=userRef.onSnapshot(doc=>{if(doc.exists&&doc.data().active===true)location.reload()});return}
@@ -441,11 +441,13 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
   if(!displayName)throw new Error('Veuillez saisir votre nom et prénom.');
   if(!professions)throw new Error('Veuillez indiquer au moins une profession.');
   if($('authPassword').value.length<8)throw new Error('Le mot de passe doit contenir au moins 8 caractères.');
+  localStorage.setItem('rigoura_registration_in_progress','1');
   const credential=await fbAuth.createUserWithEmailAndPassword($('authEmail').value.trim(),$('authPassword').value);
   await fbDb.collection('users').doc(credential.user.uid).set({email:credential.user.email,displayName,professions,role:$('authRole').value==='supervisor'?'supervisor':'member',createdAt:firebase.firestore.FieldValue.serverTimestamp(),active:(credential.user.email||'').toLowerCase()===FB_ADMIN_EMAIL},{merge:true});
+  localStorage.removeItem('rigoura_registration_in_progress');
   $('brandTitle').textContent=displayName+' — Suivi des tâches';
   authMessage('Compte créé. Votre profil professionnel est enregistré. Le compte doit être approuvé par l’administrateur avant utilisation.','pending')
- }catch(e){authMessage('Création du compte impossible : '+e.message,'error')}});
+ }catch(e){localStorage.removeItem('rigoura_registration_in_progress');authMessage('Création du compte impossible : '+e.message,'error')}});
  $('resetPasswordBtn').addEventListener('click',async()=>{if(!firebaseReady()||!$('authEmail').value.trim()){authMessage('Saisissez votre adresse e-mail.','error');return}try{await fbAuth.sendPasswordResetEmail($('authEmail').value.trim());authMessage('E-mail de réinitialisation envoyé.','ok')}catch(e){authMessage('Envoi impossible : '+e.message,'error')}});
  $('logoutBtn').addEventListener('click',async()=>{if(fbAuth)await fbAuth.signOut();accountActive=false;authUser=null;tasks=[];localStorage.setItem(STORE,'[]');render();showPage('login')});
  $('profileLink').addEventListener('click',()=>showPage('profile'));$('profileBack').addEventListener('click',()=>showPage('dashboard'));
