@@ -352,9 +352,12 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
    }
   }
   fbUnsubscribe=taskQuery.onSnapshot(async snap=>{
-   if(admin&&preserveLegacyOnEmpty&&snap.empty){tasks=legacyTasks;localStorage.setItem(STORE,JSON.stringify(tasks));render();return}
    const userNames={};try{const usersSnap=await fbDb.collection('users').get();usersSnap.docs.forEach(d=>{const u=d.data()||{};userNames[d.id]=u.displayName||u.email||d.id})}catch(_){}
-   tasks=snap.docs.map(d=>{const x=d.data()||{},ownerRef=d.ref.parent.parent;return x&&!x.deleted&&x.task?{...x.task,_ownerUid:ownerRef?ownerRef.id:user.uid,_ownerName:userNames[ownerRef?ownerRef.id:user.uid]||user.email}:null}).filter(Boolean);
+   const cloudTasks=snap.docs.map(d=>{const x=d.data()||{},ownerRef=d.ref.parent.parent;return x&&!x.deleted&&x.task?{...x.task,_ownerUid:ownerRef?ownerRef.id:user.uid,_ownerName:userNames[ownerRef?ownerRef.id:user.uid]||user.email}:null}).filter(Boolean);
+   if(admin&&preserveLegacyOnEmpty){
+    const merged=new Map(legacyTasks.map(t=>[String(t.id),{...t,_ownerUid:user.uid,_ownerName:userNames[user.uid]||user.email}]));
+    cloudTasks.forEach(t=>merged.set(String(t.id),t));tasks=[...merged.values()];
+   }else tasks=cloudTasks;
    localStorage.setItem(STORE,JSON.stringify(tasks));render();
   },err=>authMessage('Erreur de synchronisation du compte : '+err.message,'error'));
   if(admin)loadAdminUsers();
