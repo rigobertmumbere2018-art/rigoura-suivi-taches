@@ -327,7 +327,32 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
   $('profileProfessions').value=professions;
   $('profileInfo').textContent='Nom : '+(displayName||'Non renseigné')+' · Profession(s) : '+(professions||'Non renseignée(s)')+' · Adresse : '+user.email+' · Rôle : '+(admin?'Super Admin':supervisorMode?'Agent de supervision':'Agent exécutant')+' · Compte actif';
   const taskQuery=(admin||supervisorMode)?fbDb.collectionGroup('tasks'):fbDb.collection('users').doc(user.uid).collection('tasks');
+  // Migration de sécurité : les anciennes tâches locales du poste administrateur sont copiées
+  // dans son espace Firebase uniquement si cet espace est encore vide.
+  const legacyTasks=tasks.slice();let preserveLegacyOnEmpty=false;
+  if(admin&&legacyTasks.length){
+   try{
+    const ownTasksRef=fbDb.collection('users').doc(user.uid).collection('tasks');
+    const existingOwnTasks=await ownTasksRef.limit(1).get();
+    if(existingOwnTasks.empty){
+     for(let start=0;start<legacyTasks.length;start+=450){
+      const batch=fbDb.batch();
+      legacyTasks.slice(start,start+450).forEach((legacy,index)=>{
+       const clean={...legacy};delete clean._ownerUid;delete clean._ownerName;
+       clean.id=String(clean.id||('legacy-'+Date.now()+'-'+(start+index)));
+       batch.set(ownTasksRef.doc(clean.id),{task:clean,deleted:false,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      });
+      await batch.commit();
+     }
+     authMessage(legacyTasks.length+' ancienne(s) tâche(s) récupérée(s) dans le compte Super Admin.','ok');
+    }
+   }catch(migrationError){
+    preserveLegacyOnEmpty=true;
+    authMessage('Migration non terminée : les anciennes tâches restent conservées sur cet appareil. '+migrationError.message,'error');
+   }
+  }
   fbUnsubscribe=taskQuery.onSnapshot(async snap=>{
+   if(admin&&preserveLegacyOnEmpty&&snap.empty){tasks=legacyTasks;localStorage.setItem(STORE,JSON.stringify(tasks));render();return}
    const userNames={};try{const usersSnap=await fbDb.collection('users').get();usersSnap.docs.forEach(d=>{const u=d.data()||{};userNames[d.id]=u.displayName||u.email||d.id})}catch(_){}
    tasks=snap.docs.map(d=>{const x=d.data()||{},ownerRef=d.ref.parent.parent;return x&&!x.deleted&&x.task?{...x.task,_ownerUid:ownerRef?ownerRef.id:user.uid,_ownerName:userNames[ownerRef?ownerRef.id:user.uid]||user.email}:null}).filter(Boolean);
    localStorage.setItem(STORE,JSON.stringify(tasks));render();
