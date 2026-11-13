@@ -327,6 +327,7 @@ body.auth-portal #signedInPanel .actions{display:flex;flex-wrap:wrap}
 
  const FB_CONFIG_KEY='rigoura_firebase_config_v1';
  const FB_ADMIN_EMAIL='rigobertmumbere2018@gmail.com';
+ const ADMIN_RECOVERY_STORE='rigoura_admin_recovery_v1';
  const FB_DEFAULT_CONFIG={apiKey:'AIzaSyCxx8h35RNE-k59_Cnbd3R2Wrpvg4Onwp8',authDomain:'rigoura-suivi-des-taches.firebaseapp.com',projectId:'rigoura-suivi-des-taches',appId:'1:234438457861:web:6f058c1d64c96af6ccfa6c'};
  let fbConfig={...FB_DEFAULT_CONFIG};let fbApp=null,fbAuth=null,fbDb=null,fbUnsubscribe=null,authUser=null,accountActive=false,currentRole="member",supervisorMode=false;
  // La configuration du projet est intégrée au déploiement : ne pas laisser une ancienne clé locale la remplacer.
@@ -357,12 +358,13 @@ body.auth-portal #signedInPanel .actions{display:flex;flex-wrap:wrap}
   setPortalMode(false);$('authForms').hidden=true;$('signedInPanel').hidden=false;$('signedInText').textContent='Connecté : '+user.email;$('profileNav').hidden=false;
   const admin=(user.email||'').toLowerCase()===FB_ADMIN_EMAIL;
   $('adminNav').hidden=!admin;
+  if(admin)recoverAdminLocalCache();
   const userRef=fbDb.collection('users').doc(user.uid);
   const profile=await userRef.get();
   if(!profile.exists&&!localStorage.getItem('rigoura_registration_in_progress'))await userRef.set({email:user.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),active:admin,displayName:user.displayName||'',role:admin?'superadmin':'member'});
   const current=(await userRef.get()).data()||{};
   currentRole=admin?'superadmin':String(current.role||'member');supervisorMode=!admin&&currentRole==='supervisor';$('addNav').hidden=supervisorMode;$('brandTitle').textContent=(String(current.displayName||user.displayName||user.email||'').trim()||'Agent')+' — Suivi des tâches';
-  if(!admin&&current.active!==true){tasks=[];localStorage.setItem(STORE,'[]');render();showPage('login');authMessage('Votre compte est créé, mais il attend l’approbation de l’administrateur.','pending');$('signedInText').textContent='Compte en attente : '+user.email;fbUnsubscribe=userRef.onSnapshot(doc=>{if(doc.exists&&doc.data().active===true)location.reload()});return}
+  if(!admin&&current.active!==true){render();showPage('login');authMessage('Votre compte est créé, mais il attend l’approbation de l’administrateur.','pending');$('signedInText').textContent='Compte en attente : '+user.email;fbUnsubscribe=userRef.onSnapshot(doc=>{if(doc.exists&&doc.data().active===true)location.reload()});return}
   accountActive=true;setPortalMode(true);$('adminNav').hidden=!admin;authMessage('Connexion réussie. Vos tâches sont associées à votre compte.','ok');if(location.hash==='#login'||$('page-login').hidden===false)showPage('dashboard');
   const displayName=String(current.displayName||user.displayName||'').trim();
   const professions=String(current.professions||'').trim();
@@ -398,10 +400,14 @@ body.auth-portal #signedInPanel .actions{display:flex;flex-wrap:wrap}
   fbUnsubscribe=taskQuery.onSnapshot(async snap=>{
    const userNames={};try{const usersSnap=await fbDb.collection('users').get();usersSnap.docs.forEach(d=>{const u=d.data()||{};userNames[d.id]=u.displayName||u.email||d.id})}catch(_){}
    const cloudTasks=snap.docs.map(d=>{const x=d.data()||{},ownerRef=d.ref.parent.parent;return x&&!x.deleted&&x.task?{...x.task,_ownerUid:ownerRef?ownerRef.id:user.uid,_ownerName:userNames[ownerRef?ownerRef.id:user.uid]||user.email}:null}).filter(Boolean);
-   if(admin&&preserveLegacyOnEmpty){
+   if(admin&&(preserveLegacyOnEmpty||(snap.empty&&legacyTasks.length))){
     const merged=new Map(legacyTasks.map(t=>[String(t.id),{...t,_ownerUid:user.uid,_ownerName:userNames[user.uid]||user.email}]));
     cloudTasks.forEach(t=>merged.set(String(t.id),t));tasks=[...merged.values()];
-   }else tasks=cloudTasks;
+    localStorage.setItem(ADMIN_RECOVERY_STORE,JSON.stringify(tasks));
+   }else{
+    tasks=cloudTasks;
+    if(admin&&tasks.length)localStorage.setItem(ADMIN_RECOVERY_STORE,JSON.stringify(tasks));
+   }
    localStorage.setItem(STORE,JSON.stringify(tasks));render();
   },err=>authMessage('Erreur de synchronisation du compte : '+err.message,'error'));
   if(admin)loadAdminUsers();
@@ -432,6 +438,11 @@ body.auth-portal #signedInPanel .actions{display:flex;flex-wrap:wrap}
  try{mailQueue=JSON.parse(localStorage.getItem(MAIL_QUEUE)||'[]')}catch(e){mailQueue=[]}
  let tasks=[], editingId=null;
  try{tasks=JSON.parse(localStorage.getItem(STORE)||'[]')}catch(e){tasks=[]}
+ // Cache de secours local : ne jamais remplacer un cache Super Admin par une réponse cloud vide.
+ function recoverAdminLocalCache(){
+  try{const backup=JSON.parse(localStorage.getItem(ADMIN_RECOVERY_STORE)||'[]');if(Array.isArray(backup)&&backup.length&&!tasks.length){tasks=backup;localStorage.setItem(STORE,JSON.stringify(tasks));}}catch(e){}
+ }
+
  $('date').value=today();
  function persist(){localStorage.setItem(STORE,JSON.stringify(tasks));render()}
  function enqueueSync(task,deleted=false){
@@ -465,7 +476,16 @@ body.auth-portal #signedInPanel .actions{display:flex;flex-wrap:wrap}
    try{
     const query=(currentRole==='superadmin'||supervisorMode)?fbDb.collectionGroup('tasks'):fbDb.collection('users').doc(authUser.uid).collection('tasks');
     const snap=await query.get();const names={};if(currentRole==='superadmin'||supervisorMode){const users=await fbDb.collection('users').get();users.docs.forEach(d=>{const u=d.data()||{};names[d.id]=u.displayName||u.email||d.id})}else{const own=await fbDb.collection('users').doc(authUser.uid).get();const u=own.data()||{};names[authUser.uid]=u.displayName||u.email||authUser.email}
-    tasks=snap.docs.map(d=>{const v=d.data()||{},parent=d.ref.parent.parent;return v&&!v.deleted&&v.task?{...v.task,_ownerUid:parent?parent.id:authUser.uid,_ownerName:names[parent?parent.id:authUser.uid]||authUser.email}:null}).filter(Boolean);
+    const cloudTasks=snap.docs.map(d=>{const v=d.data()||{},parent=d.ref.parent.parent;return v&&!v.deleted&&v.task?{...v.task,_ownerUid:parent?parent.id:authUser.uid,_ownerName:names[parent?parent.id:authUser.uid]||authUser.email}:null}).filter(Boolean);
+    if(currentRole==='superadmin'&&snap.empty&&tasks.length){
+     localStorage.setItem(ADMIN_RECOVERY_STORE,JSON.stringify(tasks));
+     setOperationProgress('Aucune tâche cloud visible',null,'Le cache local est conservé. Vérifiez les règles Firestore avant toute restauration.');
+     updateSyncStatus('Aucune donnée cloud renvoyée : les anciennes tâches locales sont conservées.');
+     render();
+     return;
+    }
+    tasks=cloudTasks;
+    if(currentRole==='superadmin'&&tasks.length)localStorage.setItem(ADMIN_RECOVERY_STORE,JSON.stringify(tasks));
     localStorage.setItem(STORE,JSON.stringify(tasks));render();setOperationProgress('Synchronisation terminée',100,tasks.length+' tâche(s) actualisée(s).');updateSyncStatus('Synchronisation Firebase réussie.');
    }catch(err){setOperationProgress('Échec de la synchronisation',null,err.message);updateSyncStatus('Synchronisation impossible : '+err.message)}
    finally{setTimeout(()=>setOperationProgress(null),2400)}
@@ -523,7 +543,7 @@ body.auth-portal #signedInPanel .actions{display:flex;flex-wrap:wrap}
   authMessage('Demande envoyée. Votre compte est en attente d’approbation. Vous pourrez accéder à l’application après activation par l’administrateur.','pending')
  }catch(e){localStorage.removeItem('rigoura_registration_in_progress');authMessage('Création du compte impossible : '+e.message,'error')}});
  $('resetPasswordBtn').addEventListener('click',async()=>{if(!firebaseReady()||!$('authEmail').value.trim()){authMessage('Saisissez votre adresse e-mail.','error');return}try{await fbAuth.sendPasswordResetEmail($('authEmail').value.trim());authMessage('E-mail de réinitialisation envoyé.','ok')}catch(e){authMessage('Envoi impossible : '+e.message,'error')}});
- $('logoutBtn').addEventListener('click',async()=>{if(fbAuth)await fbAuth.signOut();accountActive=false;authUser=null;tasks=[];localStorage.setItem(STORE,'[]');setPortalMode(false);setAuthMode('login');render();showPage('login')});
+ $('logoutBtn').addEventListener('click',async()=>{if(authUser&&(authUser.email||'').toLowerCase()===FB_ADMIN_EMAIL){try{localStorage.setItem(ADMIN_RECOVERY_STORE,JSON.stringify(tasks));}catch(e){}}if(fbAuth)await fbAuth.signOut();accountActive=false;authUser=null;tasks=[];setPortalMode(false);setAuthMode('login');render();showPage('login')});
  $('profileLink').addEventListener('click',()=>showPage('profile'));$('profileBack').addEventListener('click',()=>showPage('dashboard'));
  $('saveProfile').addEventListener('click',async()=>{
   if(!authUser||!fbDb){authMessage('Connectez-vous pour modifier votre profil.','error');return}
