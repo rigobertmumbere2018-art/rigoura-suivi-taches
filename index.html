@@ -192,7 +192,7 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
     <h2>Administration des comptes</h2>
     <p class="small">Approuvez ou suspendez les comptes des membres. Le rôle administrateur est attribué par les règles Firestore à l’adresse administrateur définie dans le dépôt.</p>
     <div id="adminStatus" class="mail-status pending">Accès réservé à l’administrateur.</div>
-    <div class="table-wrap"><table style="min-width:820px"><thead><tr><th>Nom</th><th>Profession(s)</th><th>Adresse e-mail</th><th>Statut</th><th>Action</th></tr></thead><tbody id="userRows"></tbody></table></div>
+    <div class="table-wrap"><table style="min-width:820px"><thead><tr><th>Nom</th><th>Profession(s)</th><th>Adresse e-mail</th><th>Rôle</th><th>Statut</th><th>Action</th></tr></thead><tbody id="userRows"></tbody></table></div>
   </section>
   <section id="page-dashboard" class="page-view">
   <section class="stats no-print">
@@ -343,7 +343,7 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
  }
  async function loadAdminUsers(){
   if(!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;
-  try{const snap=await fbDb.collection('users').get();$('userRows').innerHTML=snap.docs.map(d=>{const u=d.data()||{};const active=u.active===true;return '<tr><td>'+escapeHtml(u.displayName||'—')+'</td><td>'+escapeHtml(u.professions||'—')+'</td><td>'+escapeHtml(u.email||d.id)+'</td><td>'+(active?'Actif':'En attente / suspendu')+'</td><td><button class="secondary" data-user-toggle="'+d.id+'" data-active="'+(!active)+'">'+(active?'Suspendre':'Approuver')+'</button></td></tr>'}).join('')||'<tr><td colspan="5">Aucun compte inscrit.</td></tr>';$('adminStatus').textContent=snap.size+' compte(s) enregistré(s).'}catch(e){$('adminStatus').textContent='Impossible de charger les comptes : '+e.message}
+  try{const snap=await fbDb.collection('users').get();$('userRows').innerHTML=snap.docs.map(d=>{const u=d.data()||{};const active=u.active===true;return '<tr><td>'+escapeHtml(u.displayName||'—')+'</td><td>'+escapeHtml(u.professions||'—')+'</td><td>'+escapeHtml(u.email||d.id)+'</td><td>'+((u.role==='supervisor')?'Agent de supervision':'Agent exécutant')+'</td><td>'+(active?'Actif':'En attente / suspendu')+'</td><td><button class="secondary" data-user-toggle="'+d.id+'" data-active="'+(!active)+'">'+(active?'Suspendre':'Approuver')+'</button></td></tr>'}).join('')||'<tr><td colspan="5">Aucun compte inscrit.</td></tr>';$('adminStatus').textContent=snap.size+' compte(s) enregistré(s).'}catch(e){$('adminStatus').textContent='Impossible de charger les comptes : '+e.message}
  }
 
  const STORE='suivi_taches_v1';
@@ -455,7 +455,7 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
   if(!displayName||!professions){$('profileInfo').textContent='Veuillez renseigner votre nom et au moins une profession.';return}
   try{
    await fbDb.collection('users').doc(authUser.uid).update({displayName,professions});
-   $('brandUserSubtitle').textContent=displayName+' · '+professions;
+   $('brandUserSubtitle').textContent=displayName+' · '+professions;$('brandTitle').textContent=displayName+' — Suivi des tâches';
    $('profileInfo').textContent='Profil professionnel mis à jour.';
   }catch(e){$('profileInfo').textContent='Mise à jour impossible : '+e.message}
  });
