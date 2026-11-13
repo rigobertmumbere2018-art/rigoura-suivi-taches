@@ -397,7 +397,7 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
  function persist(){localStorage.setItem(STORE,JSON.stringify(tasks));render()}
  function enqueueSync(task,deleted=false){
    if(authUser&&fbDb&&accountActive){
-    return saveTaskForAccount(task,deleted).then(()=>updateSyncStatus('Tâche enregistrée dans votre espace privé.')).catch(err=>{authMessage('Enregistrement impossible : '+err.message,'error');throw err});
+    return saveTaskForAccount(task,deleted).then(()=>updateSyncStatus('Tâche enregistrée et synchronisée dans Firebase.')).catch(err=>{authMessage('Enregistrement impossible : '+err.message,'error');throw err});
    }
    const op={opId:crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2),id:String(task.id),deleted,task:deleted?null:task};
    syncQueue.push(op);localStorage.setItem(SYNC_QUEUE,JSON.stringify(syncQueue));updateSyncStatus();
