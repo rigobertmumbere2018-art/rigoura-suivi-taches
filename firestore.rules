@@ -22,7 +22,7 @@ service cloud.firestore {
       allow create: if signedIn() && request.auth.uid == uid
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.active == isAdmin()
-        && request.resource.data.role in ['member', 'supervisor'];
+        && (isAdmin() || request.resource.data.role in ['member', 'supervisor']);
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin() || isSupervisor());
       allow update: if isAdmin()
         || (signedIn() && request.auth.uid == uid
