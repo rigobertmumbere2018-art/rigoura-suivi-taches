@@ -315,7 +315,7 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
   $('adminNav').hidden=!admin;
   const userRef=fbDb.collection('users').doc(user.uid);
   const profile=await userRef.get();
-  if(!profile.exists)await userRef.set({email:user.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),active:admin,displayName:user.displayName||''});
+  if(!profile.exists)await userRef.set({email:user.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),active:admin,displayName:user.displayName||'',role:admin?'superadmin':'member'});
   const current=(await userRef.get()).data()||{};
   currentRole=admin?'superadmin':String(current.role||'member');supervisorMode=!admin&&currentRole==='supervisor';$('addNav').hidden=supervisorMode;$('brandTitle').textContent=(String(current.displayName||user.displayName||user.email||'').trim()||'Agent')+' — Suivi des tâches';
   if(!admin&&current.active!==true){tasks=[];localStorage.setItem(STORE,'[]');render();showPage('login');authMessage('Votre compte est créé, mais il attend l’approbation de l’administrateur.','pending');$('signedInText').textContent='Compte en attente : '+user.email;fbUnsubscribe=userRef.onSnapshot(doc=>{if(doc.exists&&doc.data().active===true)location.reload()});return}
