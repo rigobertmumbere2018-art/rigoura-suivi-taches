@@ -41,6 +41,11 @@ service cloud.firestore {
         && request.resource.data.deleted == resource.data.deleted;
     }
 
+    // Lectures collectionGroup reservees a l'administration et a la supervision.
+    match /{path=**}/tasks/{taskId} {
+      allow read: if isAdmin() || isSupervisor();
+    }
+
     match /users/{uid} {
       allow create: if signedIn() && request.auth.uid == uid
         && request.resource.data.email == request.auth.token.email
