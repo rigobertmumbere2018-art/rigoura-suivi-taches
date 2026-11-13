@@ -331,8 +331,10 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
  }
  async function saveTaskForAccount(task,deleted=false){
   if(!authUser||!fbDb)return false;
-  const ref=fbDb.collection('users').doc(authUser.uid).collection('tasks').doc(String(task.id));
-  await ref.set({task:deleted?null:task,deleted:!!deleted,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});return true;
+  const ownerUid=(currentRole==='superadmin'&&task._ownerUid)?task._ownerUid:authUser.uid;
+  const cleanTask={...task};delete cleanTask._ownerUid;delete cleanTask._ownerName;
+  const ref=fbDb.collection('users').doc(ownerUid).collection('tasks').doc(String(task.id));
+  await ref.set({task:deleted?null:cleanTask,deleted:!!deleted,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});return true;
  }
  async function loadAdminUsers(){
   if(!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;
@@ -383,7 +385,17 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
   });
  }
  async function syncNow(){
-  if(authUser&&fbDb){updateSyncStatus('Synchronisation privée du compte active.');return}
+  if(authUser&&fbDb){
+   setOperationProgress('Synchronisation des tâches',null,'Récupération des données de votre espace…');
+   try{
+    const query=(currentRole==='superadmin'||supervisorMode)?fbDb.collectionGroup('tasks'):fbDb.collection('users').doc(authUser.uid).collection('tasks');
+    const snap=await query.get();const names={};const users=await fbDb.collection('users').get();users.docs.forEach(d=>{const u=d.data()||{};names[d.id]=u.displayName||u.email||d.id});
+    tasks=snap.docs.map(d=>{const v=d.data()||{},parent=d.ref.parent.parent;return v&&!v.deleted&&v.task?{...v.task,_ownerUid:parent?parent.id:authUser.uid,_ownerName:names[parent?parent.id:authUser.uid]||authUser.email}:null}).filter(Boolean);
+    localStorage.setItem(STORE,JSON.stringify(tasks));render();setOperationProgress('Synchronisation terminée',100,tasks.length+' tâche(s) actualisée(s).');updateSyncStatus('Synchronisation Firebase réussie.');
+   }catch(err){setOperationProgress('Échec de la synchronisation',null,err.message);updateSyncStatus('Synchronisation impossible : '+err.message)}
+   finally{setTimeout(()=>setOperationProgress(null),2400)}
+   return;
+  }
   if(syncBusy||!syncCfg.url||!syncCfg.token||!navigator.onLine){updateSyncStatus();return}
   syncBusy=true;updateSyncStatus('Synchronisation avec Google Sheets en cours…');
   try{
