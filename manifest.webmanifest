@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "RIGOURA DESIGN — Suivi des tâches",
-  "short_name": "Rigoura Suivi",
-  "description": "Suivi quotidien des tâches de Rigoura Design",
+  "name": "RIGOURA TASKS — Suivi des tâches",
+  "short_name": "Rigoura Tasks",
+  "description": "Suivi des tâches de l’équipe Rigoura Design",
   "start_url": "./SuiviTaches.html",
   "scope": "./",
   "display": "standalone",
