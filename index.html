@@ -392,7 +392,7 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
    setOperationProgress('Synchronisation des tâches',null,'Récupération des données de votre espace…');
    try{
     const query=(currentRole==='superadmin'||supervisorMode)?fbDb.collectionGroup('tasks'):fbDb.collection('users').doc(authUser.uid).collection('tasks');
-    const snap=await query.get();const names={};const users=await fbDb.collection('users').get();users.docs.forEach(d=>{const u=d.data()||{};names[d.id]=u.displayName||u.email||d.id});
+    const snap=await query.get();const names={};if(currentRole==='superadmin'||supervisorMode){const users=await fbDb.collection('users').get();users.docs.forEach(d=>{const u=d.data()||{};names[d.id]=u.displayName||u.email||d.id})}else{const own=await fbDb.collection('users').doc(authUser.uid).get();const u=own.data()||{};names[authUser.uid]=u.displayName||u.email||authUser.email}
     tasks=snap.docs.map(d=>{const v=d.data()||{},parent=d.ref.parent.parent;return v&&!v.deleted&&v.task?{...v.task,_ownerUid:parent?parent.id:authUser.uid,_ownerName:names[parent?parent.id:authUser.uid]||authUser.email}:null}).filter(Boolean);
     localStorage.setItem(STORE,JSON.stringify(tasks));render();setOperationProgress('Synchronisation terminée',100,tasks.length+' tâche(s) actualisée(s).');updateSyncStatus('Synchronisation Firebase réussie.');
    }catch(err){setOperationProgress('Échec de la synchronisation',null,err.message);updateSyncStatus('Synchronisation impossible : '+err.message)}
