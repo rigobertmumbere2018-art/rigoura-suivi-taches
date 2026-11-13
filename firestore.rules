@@ -1,34 +1,39 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
-      return request.auth != null;
-    }
+    function signedIn() { return request.auth != null; }
     function isAdmin() {
-      return signedIn()
-        && request.auth.token.email != null
+      return signedIn() && request.auth.token.email != null
         && request.auth.token.email.lower() == 'rigobertmumbere2018@gmail.com';
     }
-    function isActiveUser(uid) {
-      return isAdmin()
-        || (signedIn()
-          && request.auth.uid == uid
-          && get(/databases/$(database)/documents/users/$(uid)).data.active == true);
+    function isSupervisor() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.active == true
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor';
     }
-
+    function isActiveUser(uid) {
+      return isAdmin() || isSupervisor()
+        || (signedIn() && request.auth.uid == uid
+          && get(/databases/$(database)/documents/users/$(uid)).data.active == true
+          && get(/databases/$(database)/documents/users/$(uid)).data.role != 'supervisor');
+    }
     match /users/{uid} {
-      allow create: if signedIn()
-        && request.auth.uid == uid
+      allow create: if signedIn() && request.auth.uid == uid
         && request.resource.data.email == request.auth.token.email
-        && request.resource.data.active == isAdmin();
-      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+        && request.resource.data.active == isAdmin()
+        && request.resource.data.role in ['member', 'supervisor'];
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin() || isSupervisor());
       allow update: if isAdmin()
         || (signedIn() && request.auth.uid == uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'professions']));
       allow delete: if isAdmin();
-
       match /tasks/{taskId} {
-        allow read, create, update, delete: if isActiveUser(uid);
+        allow read: if isActiveUser(uid);
+        allow create, update, delete: if isAdmin()
+          || (signedIn() && request.auth.uid == uid
+            && get(/databases/$(database)/documents/users/$(uid)).data.active == true
+            && get(/databases/$(database)/documents/users/$(uid)).data.role != 'supervisor');
       }
     }
   }
