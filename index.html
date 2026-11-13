@@ -129,7 +129,7 @@ footer{text-align:center;color:#d8def5;font-size:12px;margin-top:16px}
 
 /* Separate authentication portal; hide all internal workspace UI until access is approved */
 body.auth-portal{min-height:100vh;background:radial-gradient(ellipse at 15% 10%,#243b75 0,#101b43 42%,#080b20 100%);color:#172033;display:flex;flex-direction:column;justify-content:center}
-body.auth-portal>header,body.auth-portal .app-nav,body.auth-portal main>section:not(#page-login),body.auth-portal .brand-footer,body.auth-portal #printArea{display:none!important}
+body.auth-portal>header,body.auth-portal main>.app-nav,body.auth-portal .app-nav,body.auth-portal main>section:not(#page-login),body.auth-portal .brand-footer,body.auth-portal #printArea{display:none!important}
 body.auth-portal main{width:min(100% - 32px,480px);max-width:480px;margin:32px auto;padding:0}
 body.auth-portal #page-login{display:block!important;margin:0;padding:clamp(22px,5vw,38px);border:1px solid rgba(255,255,255,.35);border-radius:20px;box-shadow:0 24px 80px rgba(0,0,0,.35);background:#fff}
 .portal-brand{display:flex;align-items:center;gap:14px;margin-bottom:28px}
@@ -363,7 +363,7 @@ body.auth-portal #signedInPanel .actions{display:flex;flex-wrap:wrap}
   const current=(await userRef.get()).data()||{};
   currentRole=admin?'superadmin':String(current.role||'member');supervisorMode=!admin&&currentRole==='supervisor';$('addNav').hidden=supervisorMode;$('brandTitle').textContent=(String(current.displayName||user.displayName||user.email||'').trim()||'Agent')+' — Suivi des tâches';
   if(!admin&&current.active!==true){tasks=[];localStorage.setItem(STORE,'[]');render();showPage('login');authMessage('Votre compte est créé, mais il attend l’approbation de l’administrateur.','pending');$('signedInText').textContent='Compte en attente : '+user.email;fbUnsubscribe=userRef.onSnapshot(doc=>{if(doc.exists&&doc.data().active===true)location.reload()});return}
-  accountActive=true;setPortalMode(true);authMessage('Connexion réussie. Vos tâches sont associées à votre compte.','ok');if(location.hash==='#login')showPage('dashboard');
+  accountActive=true;setPortalMode(true);$('adminNav').hidden=!admin;authMessage('Connexion réussie. Vos tâches sont associées à votre compte.','ok');if(location.hash==='#login'||$('page-login').hidden===false)showPage('dashboard');
   const displayName=String(current.displayName||user.displayName||'').trim();
   const professions=String(current.professions||'').trim();
   $('brandUserSubtitle').textContent=[displayName||user.email,professions].filter(Boolean).join(' · ');
@@ -536,14 +536,14 @@ body.auth-portal #signedInPanel .actions{display:flex;flex-wrap:wrap}
   }catch(e){$('profileInfo').textContent='Mise à jour impossible : '+e.message}
  });
  $('userRows').addEventListener('click',async e=>{const b=e.target.closest('[data-user-toggle]');if(!b||!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;try{await fbDb.collection('users').doc(b.dataset.userToggle).update({active:b.dataset.active==='true'});await loadAdminUsers()}catch(err){$('adminStatus').textContent='Modification refusée : '+err.message}});
- $('adminNav').addEventListener('click',loadAdminUsers);
+ $('adminNav').addEventListener('click',event=>{event.preventDefault();if(!accountActive||(authUser?.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;showPage('admin');loadAdminUsers();});
 
  setAuthMode('login');
  if(!initFirebase())authMessage("Le service de connexion est momentanément indisponible. Réessayez ultérieurement.",'error');
 
  function showPage(name){
    if(!accountActive)name='login';
-   if(name==='admin'&&(!accountActive||!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL))name='dashboard';
+   if(name==='admin'&&(!accountActive||!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL)){name='dashboard';authMessage('Cette rubrique est réservée au Super Admin.','error');}
    if(name==='add'&&supervisorMode)name='dashboard';
    if(name==='profile'&&!authUser)name='login';
    const allowed=['login','add','dashboard','exports','profile','admin'];
