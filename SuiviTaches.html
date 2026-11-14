@@ -222,9 +222,13 @@ body.auth-portal #signedInPanel .actions{display:flex;flex-wrap:wrap}
   </section>
   <section id="page-admin" class="page-view panel" hidden>
     <h2>Administration des comptes</h2>
-    <p class="small">Approuvez ou suspendez les comptes des membres. Le rôle administrateur est attribué par les règles Firestore à l’adresse administrateur définie dans le dépôt.</p>
+    <p class="small">Gérez les accès des agents. Le retrait d’un agent désactive uniquement son accès : son compte, son nom et toutes ses tâches historiques sont conservés dans Firebase.</p>
     <div id="adminStatus" class="mail-status pending">Accès réservé à l’administrateur.</div>
+    <h3>Équipe active et demandes d’accès</h3>
     <div class="table-wrap"><table style="min-width:820px"><thead><tr><th>Nom</th><th>Profession(s)</th><th>Adresse e-mail</th><th>Rôle</th><th>Statut</th><th>Action</th></tr></thead><tbody id="userRows"></tbody></table></div>
+    <h3 style="margin-top:22px">Anciens agents — historique conservé</h3>
+    <p class="small">Les tâches de ces agents restent dans le tableau de bord et dans les exports, avec leur nom d’origine.</p>
+    <div class="table-wrap"><table style="min-width:820px"><thead><tr><th>Nom</th><th>Profession(s)</th><th>Adresse e-mail</th><th>Rôle</th><th>Date de retrait</th><th>Action</th></tr></thead><tbody id="archivedUserRows"></tbody></table></div>
   </section>
   <section id="page-dashboard" class="page-view">
   <section class="stats no-print">
@@ -364,7 +368,7 @@ body.auth-portal #signedInPanel .actions{display:flex;flex-wrap:wrap}
   if(!profile.exists&&!localStorage.getItem('rigoura_registration_in_progress'))await userRef.set({email:user.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),active:admin,displayName:user.displayName||'',role:admin?'superadmin':'member'});
   const current=(await userRef.get()).data()||{};
   currentRole=admin?'superadmin':String(current.role||'member');supervisorMode=!admin&&currentRole==='supervisor';$('addNav').hidden=supervisorMode;$('brandTitle').textContent=(String(current.displayName||user.displayName||user.email||'').trim()||'Agent')+' — Suivi des tâches';
-  if(!admin&&current.active!==true){render();showPage('login');authMessage('Votre compte est créé, mais il attend l’approbation de l’administrateur.','pending');$('signedInText').textContent='Compte en attente : '+user.email;fbUnsubscribe=userRef.onSnapshot(doc=>{if(doc.exists&&doc.data().active===true)location.reload()});return}
+  if(!admin&&(current.active!==true||current.archived===true)){render();showPage('login');authMessage(current.archived===true?'Votre accès à l’équipe a été retiré. Vos anciennes tâches restent conservées.':'Votre compte est créé, mais il attend l’approbation de l’administrateur.','pending');$('signedInText').textContent=(current.archived===true?'Accès retiré : ':'Compte en attente : ')+user.email;fbUnsubscribe=userRef.onSnapshot(doc=>{if(doc.exists&&doc.data().active===true&&doc.data().archived!==true)location.reload()});return}
   accountActive=true;setPortalMode(true);$('adminNav').hidden=!admin;authMessage('Connexion réussie. Vos tâches sont associées à votre compte.','ok');if(location.hash==='#login'||$('page-login').hidden===false)showPage('dashboard');
   const displayName=String(current.displayName||user.displayName||'').trim();
   const professions=String(current.professions||'').trim();
@@ -421,7 +425,24 @@ body.auth-portal #signedInPanel .actions{display:flex;flex-wrap:wrap}
  }
  async function loadAdminUsers(){
   if(!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;
-  try{const snap=await fbDb.collection('users').get();$('userRows').innerHTML=snap.docs.map(d=>{const u=d.data()||{};const active=u.active===true;return '<tr><td>'+escapeHtml(u.displayName||'—')+'</td><td>'+escapeHtml(u.professions||'—')+'</td><td>'+escapeHtml(u.email||d.id)+'</td><td>'+((u.role==='supervisor')?'Agent de supervision':'Agent exécutant')+'</td><td>'+(active?'Actif':'En attente / suspendu')+'</td><td><button class="secondary" data-user-toggle="'+d.id+'" data-active="'+(!active)+'">'+(active?'Suspendre':'Approuver')+'</button></td></tr>'}).join('')||'<tr><td colspan="5">Aucun compte inscrit.</td></tr>';$('adminStatus').textContent=snap.size+' compte(s) enregistré(s).'}catch(e){$('adminStatus').textContent='Impossible de charger les comptes : '+e.message}
+  try{
+   const snap=await fbDb.collection('users').get();
+   const activeRows=[],archivedRows=[];
+   snap.docs.forEach(d=>{
+    const u=d.data()||{},name=escapeHtml(u.displayName||'—'),prof=escapeHtml(u.professions||'—'),email=escapeHtml(u.email||d.id),role=(u.role==='supervisor')?'Agent de supervision':'Agent exécutant';
+    if(u.archived===true){
+     const date=u.archivedAt&&u.archivedAt.toDate?u.archivedAt.toDate().toLocaleDateString('fr-FR'):'—';
+     archivedRows.push('<tr><td>'+name+'</td><td>'+prof+'</td><td>'+email+'</td><td>'+role+'</td><td>'+date+'</td><td><button class="secondary" data-user-restore="'+d.id+'">Réintégrer</button></td></tr>');
+    }else{
+     const active=u.active===true;
+     const action=active?'<button class="danger" data-user-archive="'+d.id+'">Retirer de l’équipe</button>':'<button class="secondary" data-user-toggle="'+d.id+'" data-active="true">Approuver</button>';
+     activeRows.push('<tr><td>'+name+'</td><td>'+prof+'</td><td>'+email+'</td><td>'+role+'</td><td>'+(active?'Actif':'En attente / suspendu')+'</td><td>'+action+'</td></tr>');
+    }
+   });
+   $('userRows').innerHTML=activeRows.join('')||'<tr><td colspan="6">Aucun agent actif ou en attente.</td></tr>';
+   $('archivedUserRows').innerHTML=archivedRows.join('')||'<tr><td colspan="6">Aucun ancien agent.</td></tr>';
+   $('adminStatus').textContent=snap.size+' compte(s) enregistré(s) · '+archivedRows.length+' ancien(s) agent(s).';
+  }catch(e){$('adminStatus').textContent='Impossible de charger les comptes : '+e.message}
  }
 
  const STORE='suivi_taches_v1';
@@ -555,7 +576,25 @@ body.auth-portal #signedInPanel .actions{display:flex;flex-wrap:wrap}
    $('profileInfo').textContent='Profil professionnel mis à jour.';
   }catch(e){$('profileInfo').textContent='Mise à jour impossible : '+e.message}
  });
- $('userRows').addEventListener('click',async e=>{const b=e.target.closest('[data-user-toggle]');if(!b||!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;try{await fbDb.collection('users').doc(b.dataset.userToggle).update({active:b.dataset.active==='true'});await loadAdminUsers()}catch(err){$('adminStatus').textContent='Modification refusée : '+err.message}});
+ $('userRows').addEventListener('click',async e=>{
+  const archive=e.target.closest('[data-user-archive]'),toggle=e.target.closest('[data-user-toggle]');
+  if(!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;
+  try{
+   if(archive){
+    if(!confirm('Retirer cet agent de l’équipe ? Son compte et toutes ses tâches seront conservés dans l’historique. Aucune tâche ne sera supprimée.'))return;
+    await fbDb.collection('users').doc(archive.dataset.userArchive).update({active:false,archived:true,archivedAt:firebase.firestore.FieldValue.serverTimestamp(),archivedBy:authUser.email});
+   }else if(toggle){
+    await fbDb.collection('users').doc(toggle.dataset.userToggle).update({active:toggle.dataset.active==='true',archived:false,archivedAt:firebase.firestore.FieldValue.delete(),archivedBy:firebase.firestore.FieldValue.delete()});
+   }else return;
+   await loadAdminUsers();
+  }catch(err){$('adminStatus').textContent='Modification refusée : '+err.message}
+ });
+ $('archivedUserRows').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-user-restore]');if(!b||!authUser||(authUser.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;
+  if(!confirm('Réintégrer cet ancien agent ? Son historique de tâches sera conservé.'))return;
+  try{await fbDb.collection('users').doc(b.dataset.userRestore).update({active:true,archived:false,archivedAt:firebase.firestore.FieldValue.delete(),archivedBy:firebase.firestore.FieldValue.delete()});await loadAdminUsers()}
+  catch(err){$('adminStatus').textContent='Réintégration refusée : '+err.message}
+ });
  $('adminNav').addEventListener('click',event=>{event.preventDefault();if(!accountActive||(authUser?.email||'').toLowerCase()!==FB_ADMIN_EMAIL)return;showPage('admin');loadAdminUsers();});
 
  setAuthMode('login');
